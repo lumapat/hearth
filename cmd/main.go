@@ -10,7 +10,7 @@ type CmdlineArgs struct {
 }
 
 func (args *CmdlineArgs) initFlags() {
-	flag.StringVar(&args.action, "action", "help", "hearth action to perform")
+	flag.StringVar(&args.action, "a", "nil", "hearth action to perform (list|sync|compare)")
 }
 
 func main() {
@@ -18,5 +18,14 @@ func main() {
 	args.initFlags()
 
 	flag.Parse()
-	fmt.Printf("The action you chose is %s\n", args.action)
+	switch args.action {
+	case "compare":
+		fmt.Printf("'%s' to be implemented", args.action)
+	case "list":
+		fmt.Printf("'%s' to be implemented", args.action)
+	case "sync":
+		fmt.Printf("'%s' to be implemented", args.action)
+	default:
+		fmt.Printf("Nothing can be done for action '%s'\n", args.action)
+	}
 }
