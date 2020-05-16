@@ -1,2 +1,5 @@
+# Executables
+*.tsk
+
 # VS Code
 *.code-workspace
