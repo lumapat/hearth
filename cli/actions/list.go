@@ -3,6 +3,7 @@ package actions
 import (
 	"fmt"
 
+	"github.com/shirou/gopsutil/disk"
 	cobra "github.com/spf13/cobra"
 )
 
@@ -26,7 +27,15 @@ func NewListCommand() *cobra.Command {
 		Use:   "list",
 		Short: "List storage devices and save points in a system",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Args: %v\n", args)
+			partitions, err := disk.Partitions(false)
+			if err != nil {
+				fmt.Printf("Error occurred: %s\n", err.Error())
+			} else {
+				fmt.Println("Found the following storage devices:")
+				for _, p := range partitions {
+					fmt.Printf("\t%s mounted on %s\n", p.Device, p.Mountpoint)
+				}
+			}
 		},
 	}
 
