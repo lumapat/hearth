@@ -42,36 +42,36 @@ func getDirectoryContents(dirPath string) (map[string]bool, error) {
 	return contents, err
 }
 
-type StringHeap []string
+type stringHeap []string
 
-func (h StringHeap) Len() int           { return len(h) }
-func (h StringHeap) Less(i, j int) bool { return h[i] < h[j] }
-func (h StringHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h stringHeap) Len() int           { return len(h) }
+func (h stringHeap) Less(i, j int) bool { return h[i] < h[j] }
+func (h stringHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
-func (h *StringHeap) Push(x interface{}) {
+func (h *stringHeap) Push(x interface{}) {
 	*h = append(*h, x.(string))
 }
 
-func (h *StringHeap) Pop() interface{} {
+func (h *stringHeap) Pop() interface{} {
 	old := *h
 	x := old[len(old)-1]
 	*h = old[0 : len(old)-1]
 	return x
 }
 
-type DirCompareResult struct {
-	FromDirOnly StringHeap
-	ToDirOnly   StringHeap
-	BothDirs    StringHeap
+type dirCompareResult struct {
+	fromDirOnly stringHeap
+	toDirOnly   stringHeap
+	bothDirs    stringHeap
 }
 
-func (result *DirCompareResult) prettyPrint() {
-	result.FromDirOnly.prettyPrintWithPreface("Contents from first directory")
-	result.ToDirOnly.prettyPrintWithPreface("Contents from second directory")
-	result.BothDirs.prettyPrintWithPreface("Contents in both directories")
+func (result *dirCompareResult) prettyPrint() {
+	result.fromDirOnly.prettyPrintWithPreface("Contents from first directory")
+	result.toDirOnly.prettyPrintWithPreface("Contents from second directory")
+	result.bothDirs.prettyPrintWithPreface("Contents in both directories")
 }
 
-func (h *StringHeap) prettyPrintWithPreface(preface string) {
+func (h *stringHeap) prettyPrintWithPreface(preface string) {
 	fmt.Println(preface)
 
 	if h.Len() == 0 {
@@ -85,33 +85,33 @@ func (h *StringHeap) prettyPrintWithPreface(preface string) {
 }
 
 // TODO: Docs
-func compareDirectories(fromDirPath string, toDirPath string) (DirCompareResult, error) {
+func compareDirectories(fromDirPath string, toDirPath string) (dirCompareResult, error) {
 	fromDirContents, fromDirError := getDirectoryContents(fromDirPath)
 	if fromDirError != nil {
-		return DirCompareResult{}, fromDirError
+		return dirCompareResult{}, fromDirError
 	}
 
 	toDirContents, toDirError := getDirectoryContents(toDirPath)
 	if toDirError != nil {
-		return DirCompareResult{}, toDirError
+		return dirCompareResult{}, toDirError
 	}
 
-	result := DirCompareResult{}
-	heap.Init(&result.ToDirOnly)
-	heap.Init(&result.FromDirOnly)
-	heap.Init(&result.BothDirs)
+	result := dirCompareResult{}
+	heap.Init(&result.toDirOnly)
+	heap.Init(&result.fromDirOnly)
+	heap.Init(&result.bothDirs)
 
 	for k := range fromDirContents {
 		if !toDirContents[k] {
-			heap.Push(&result.FromDirOnly, k)
+			heap.Push(&result.fromDirOnly, k)
 		} else {
-			heap.Push(&result.BothDirs, k)
+			heap.Push(&result.bothDirs, k)
 		}
 	}
 
 	for k := range toDirContents {
 		if !fromDirContents[k] {
-			heap.Push(&result.ToDirOnly, k)
+			heap.Push(&result.toDirOnly, k)
 		}
 	}
 
