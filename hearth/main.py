@@ -62,7 +62,9 @@ def list_cmd():
     name="sync",
     short_help="Sync the contents of two or more storage devices"
 )
-def sync_cmd():
+@click.argument("src")
+@click.argument("target")
+def sync_cmd(src, target):
     print("To be implemented!")
 
 def main():
