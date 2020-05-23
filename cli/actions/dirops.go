@@ -23,12 +23,14 @@ func GetDirectoryContents(dirPath string) (map[string]bool, error) {
 	return contents, err
 }
 
+// DirTree TODO: Docs
 type DirTree struct {
 	CurDir string
-	Files  []string
-	Dirs   []*DirTree
+	Files  map[string]bool
+	Dirs   map[string]*DirTree
 }
 
+// PathTree TODO: Docs
 type PathTree struct {
 	CurElement string
 	ChildTree  *PathTree
@@ -41,37 +43,28 @@ func (dt *DirTree) AddPathTree(pt *PathTree) error {
 		// TODO: Throw something
 		return nil
 	} else if dt.CurDir != pt.CurElement {
+		// Always start with the same root elements
+		// and this will never be hit in the recursive calls
 		// TODO: Throw an actual error
+		return nil
+	} else if pt.ChildTree == nil {
+		// TODO: ERROR?!
 		return nil
 	}
 
-	if pt.IsDir {
-		var foundDt *DirTree
-		for _, d := range dt.Dirs {
-			if d.CurDir == pt.CurElement {
-				foundDt = d
-				break
-			}
-		}
-
-		if foundDt != nil {
-			foundDt.AddPathTree(pt.ChildTree)
+	childElement := pt.ChildTree.CurElement
+	if pt.ChildTree.IsDir {
+		childDt := dt.Dirs[childElement]
+		if childDt == nil {
+			// TODO: Handle nil
+			dt.Dirs[childElement] = pt.ChildTree.ToDirTree()
 		} else {
-			// TODO: Error check if this is good
-			newDirTree := pt.ChildTree.ToDirTree()
-			dt.Dirs = append(dt.Dirs, newDirTree)
+			// TODO: Handle error
+			childDt.AddPathTree(pt.ChildTree)
 		}
 	} else {
-		foundFile := false
-		for _, f := range dt.Files {
-			if f == pt.CurElement {
-				foundFile = true
-				break
-			}
-		}
-
-		if !foundFile {
-			dt.Files = append(dt.Files, pt.CurElement)
+		if !dt.Files[childElement] {
+			dt.Files[childElement] = true
 		}
 	}
 
@@ -87,12 +80,16 @@ func (p *PathTree) ToDirTree() *DirTree {
 		return nil
 	}
 
-	var newDirs []*DirTree
+	newDirTree := DirTree{CurDir: p.CurElement}
 	if p.ChildTree != nil {
-		newDirs = append(newDirs, p.ChildTree.ToDirTree())
+		if p.ChildTree.IsDir {
+			newDirTree.Dirs[p.ChildTree.CurElement] = p.ChildTree.ToDirTree()
+		} else {
+			newDirTree.Files[p.ChildTree.CurElement] = true
+		}
 	}
 
-	return &DirTree{CurDir: p.CurElement, Dirs: newDirs}
+	return &newDirTree
 }
 
 // AsPathTree TODO: Docs and error
