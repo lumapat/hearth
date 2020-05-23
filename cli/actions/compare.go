@@ -3,8 +3,6 @@ package actions
 import (
 	"container/heap"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	cobra "github.com/spf13/cobra"
 )
@@ -25,21 +23,6 @@ func NewCompareCommand() *cobra.Command {
 	}
 
 	return cmd
-}
-
-func getDirectoryContents(dirPath string) (map[string]bool, error) {
-	contents := map[string]bool{}
-
-	err := filepath.Walk(dirPath,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-			contents[path] = true
-			return err
-		})
-
-	return contents, err
 }
 
 type stringHeap []string
@@ -86,12 +69,12 @@ func (h *stringHeap) prettyPrintWithPreface(preface string) {
 
 // TODO: Docs
 func compareDirectories(fromDirPath string, toDirPath string) (dirCompareResult, error) {
-	fromDirContents, fromDirError := getDirectoryContents(fromDirPath)
+	fromDirContents, fromDirError := GetDirectoryContents(fromDirPath)
 	if fromDirError != nil {
 		return dirCompareResult{}, fromDirError
 	}
 
-	toDirContents, toDirError := getDirectoryContents(toDirPath)
+	toDirContents, toDirError := GetDirectoryContents(toDirPath)
 	if toDirError != nil {
 		return dirCompareResult{}, toDirError
 	}

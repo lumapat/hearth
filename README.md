@@ -9,6 +9,11 @@
 * Find data discrepancies and differences between devices, and even list storage capacities overall and by device
 * Plug in different storage types (HDDs, flash storage, NAS, etc.) and treat them all as a single storage type
 
+## Alternate names to consider (keep hearth for now)
+
+* Boss
+* CeBu (CEntralized BackUp)
+
 ## TODO
 
 * Add commands:
