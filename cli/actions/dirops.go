@@ -108,7 +108,8 @@ func AsPathTree(path string) *PathTree {
 	tree := PathTree{CurElement: pathElements[0], IsDir: true}
 	treeIter := &tree
 	for i := 1; i < len(pathElements); i++ {
-		newTree := PathTree{CurElement: pathElements[i], IsDir: true}
+		newElement := tree.CurElement + string(filepath.Separator) + pathElements[i]
+		newTree := PathTree{CurElement: newElement, IsDir: true}
 		tree.ChildTree = &newTree
 		treeIter = &newTree
 	}
@@ -119,61 +120,17 @@ func AsPathTree(path string) *PathTree {
 	return &tree
 }
 
-// // AsDirTree TODO: Docs
-// func AsDirTree(path string) *DirTree {
-// 	if path == "" {
-// 		return nil
-// 	}
+// CompDir TODO: Docs and import heap
+type CompDir struct {
+	DirOne []string
+	DirTwo []string
+	Both   []string
+}
 
-// 	fstat, statErr := os.Stat(path)
-// 	if statErr != nil {
-// 		// Could not open file for stats
-// 		return nil
-// 	}
-
-// 	// Only iterate up to the second to last element
-// 	// as the last element can be a file
-// 	pathElements := strings.Split(path, string(filepath.Separator))
-// 	tree := DirTree{CurDir: pathElements[0]}
-// 	treeIter := &tree
-// 	for i := 1; i < len(pathElements)-1; i++ {
-// 		newTree := DirTree{CurDir: pathElements[i]}
-// 		treeIter.Dirs = append(treeIter.Dirs, &newTree)
-// 		treeIter = &newTree
-// 	}
-
-// 	baseElement := pathElements[len(pathElements)-1]
-// 	if fstat.IsDir() {
-// 		treeIter.Dirs = append(treeIter.Dirs, &DirTree{CurDir: baseElement})
-// 	} else {
-// 		treeIter.Files = append(treeIter.Files, baseElement)
-// 	}
-
-// 	return &tree
-// }
-
-// CombineDirTrees TODO: Docs
-// func CombineDirTrees(dir1 *DirTree, dir2 *DirTree) (*DirTree, error) {
-// 	if dir2 == nil {
-// 		return nil, fmt.Errorf("second directory is %v", dir2)
-// 	} else if dir1 == nil {
-// 		return nil, fmt.Errorf("first directory tree is %v", dir1)
-// 	} else if dir1.CurDir != dir2.CurDir {
-// 		return nil, fmt.Errorf("root directories need to match. %v (1) is not %v (2)", dir1.CurDir, dir2.CurDir)
-// 	}
-
-// 	newDir := *dir1
-// 	dirSet1 := map[string]*DirTree
-// 	for _, d := range iter1.Dirs {
-// 		dirSet1[d.CurDir] = true
-// 	}
-// 	dirSet2 := map[string]*DirTree
-// 	for _, d := range iter2.Dirs {
-// 		dirSet2[d.CurDir] = true
-// 	}
-
-// 	fileSet
-
-// 	for _, d := range iter2.Dirs {
-// 	}
-// }
+// CompareDirTrees TODO: Docs
+func CompareDirTrees(dt1 *DirTree, dt2 *DirTree) *CompDir {
+	if dt1 == nil || dt2 == nil {
+		return nil
+	}
+	return nil
+}
