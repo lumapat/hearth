@@ -1,7 +1,10 @@
+from os import curdir, path
+
 import click
 import filecmp
 import psutil
 import pprint
+import shutil
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -62,10 +65,35 @@ def list_cmd():
     name="sync",
     short_help="Sync the contents of two or more storage devices"
 )
-@click.argument("src")
-@click.argument("target")
-def sync_cmd(src, target):
-    print("To be implemented!")
+@click.argument("master")
+@click.argument("backup")
+@click.option("--no-commit", is_flag=True, help="Do not commit sync")
+def sync_cmd(master, backup, no_commit):
+
+    def flatten_left_only(dc, prefix):
+        lefts = [path.join(prefix, l) for l in dc.left_only]
+
+        if dc.subdirs:
+            return lefts + [e for d, l in dc.subdirs.items() for e in flatten_left_only(l, d)]
+        else:
+            return lefts
+
+    res = flatten_left_only(filecmp.dircmp(master, backup), "")
+
+    if no_commit:
+        print(f"Syncing the following data from {master} to {backup}: {pp.pformat(res)}")
+    else:
+        print(f"Syncing {master} contents to {backup}...")
+        for e in res:
+            master_copy = path.join(master, e)
+            backup_copy = path.join(backup, e)
+
+            if path.isfile(master_copy):
+                shutil.copy(master_copy, backup_copy)
+                print(f"File {master_copy} >>>> {backup_copy}")
+            else:
+                shutil.copytree(master_copy, backup_copy)
+                print(f"Directory {master_copy} >>>> {backup_copy}")
 
 def main():
     root.add_command(compare_cmd)
@@ -75,4 +103,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
