@@ -1,19 +1,34 @@
 from typing import Any, Dict
+from pathlib import Path
+import os
 import pytest
 
-from hearth.dircmp import Dir
+from hearth.dirdiff import Dir
 
 
-def create_dir(path: str, dir_dict: Dict[Any]):
-    pass None
+def create_dir(path: str, dir_dict: Dict[str, Any]) -> None:
+    """ Creates a directory in the specified path
+
+    :param path: Path to create directory in
+    :param dir_dict: Specification of contents to create in directory
+    """
+    for f in dir_dict["files"]:
+        Path(os.path.join(path, f)).touch()
+
+    for contents in dir_dict["subdirs"]:
+        subdir_path = os.path.join(path, contents["dirname"])
+        Path(subdir_path).mkdir()
+
+        create_dir(subdir_path, contents)
 
 
-def test_dir_with_only_files(temp_path):
+def test_dir_with_only_files(tmpdir):
     # GIVEN
+    temp_path = str(tmpdir)
     expected = {
-        "dirname": temp_path,
+        "dirname": os.path.basename(temp_path),
         "files": {"one", "two", "three"},
-        "subdirs": {}
+        "subdirs": []
     }
     create_dir(temp_path, expected)
 
@@ -24,10 +39,11 @@ def test_dir_with_only_files(temp_path):
     assert expected == actual.asdict()
 
 
-def test_dir_with_files_and_subdir(temp_path):
+def test_dir_with_files_and_subdir(tmpdir):
     # GIVEN
+    temp_path = str(tmpdir)
     expected = {
-        "dirname": temp_path,
+        "dirname": os.path.basename(temp_path),
         "files": {"one", "two", "three"},
         "subdirs": [{
             "dirname": "sublevel1",
@@ -44,10 +60,11 @@ def test_dir_with_files_and_subdir(temp_path):
     assert expected == actual.asdict()
 
 
-def test_dir_with_multiple_subdir_levels(temp_path):
+def test_dir_with_multiple_subdir_levels(tmpdir):
     # GIVEN
+    temp_path = str(tmpdir)
     expected = {
-        "dirname": temp_path,
+        "dirname": os.path.basename(temp_path),
         "files": {"one"},
         "subdirs": [{
             "dirname": "sublevel1",
