@@ -22,6 +22,7 @@ def create_dir(path: str, dir_dict: Dict[str, Any]) -> None:
         create_dir(subdir_path, contents)
 
 
+@pytest.mark.dir_ctor
 def test_dir_with_only_files(tmpdir):
     # GIVEN
     temp_path = str(tmpdir)
@@ -39,6 +40,7 @@ def test_dir_with_only_files(tmpdir):
     assert expected == actual.asdict()
 
 
+@pytest.mark.dir_ctor
 def test_dir_with_files_and_subdir(tmpdir):
     # GIVEN
     temp_path = str(tmpdir)
@@ -60,6 +62,7 @@ def test_dir_with_files_and_subdir(tmpdir):
     assert expected == actual.asdict()
 
 
+@pytest.mark.dir_ctor
 def test_dir_with_multiple_subdir_levels(tmpdir):
     # GIVEN
     temp_path = str(tmpdir)
