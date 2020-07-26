@@ -56,6 +56,5 @@ def right_dirs_only(left_dir: Dir, right_dir: Dir) -> Set[str]:
     return right_dir.subdirs - left_dir.subdirs
 
 
-# FIXME: Need to have file-by-file comparison
 def common_dirs(left_dir: Dir, right_dir: Dir) -> List[Dir]:
     return left_dir.subdirs & right_dir.subdirs
