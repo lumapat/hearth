@@ -28,6 +28,7 @@ def test_dir_with_only_files(tmpdir):
     temp_path = str(tmpdir)
     expected = {
         "dirname": os.path.basename(temp_path),
+        "fullpath": temp_path,
         "files": {"one", "two", "three"},
         "subdirs": []
     }
@@ -46,9 +47,11 @@ def test_dir_with_files_and_subdir(tmpdir):
     temp_path = str(tmpdir)
     expected = {
         "dirname": os.path.basename(temp_path),
+        "fullpath": temp_path,
         "files": {"one", "two", "three"},
         "subdirs": [{
             "dirname": "sublevel1",
+            "fullpath": os.path.join(temp_path, "sublevel1"),
             "files": {"file1.txt", "file2.tsk", "file3.js"},
             "subdirs": []
         }]
@@ -68,21 +71,26 @@ def test_dir_with_multiple_subdir_levels(tmpdir):
     temp_path = str(tmpdir)
     expected = {
         "dirname": os.path.basename(temp_path),
+        "fullpath": temp_path,
         "files": {"one"},
         "subdirs": [{
             "dirname": "sublevel1",
+            "fullpath": os.path.join(temp_path, "sublevel1"),
             "files": {"file1.txt", "file2.tsk"},
             "subdirs": [{
                 "dirname": "sublevel2",
+                "fullpath": os.path.join(temp_path, "sublevel1", "sublevel2"),
                 "files": {"ugh.js", "ayy.css", "nope.html"},
                 "subdirs": [{
                     "dirname": "Secret Pictures",
+                    "fullpath": os.path.join(temp_path, "sublevel1", "sublevel2", "Secret Pictures"),
                     "files": {"SECRET.png"},
                     "subdirs": []
                 }]
             },
             {
                 "dirname": "Pictures",
+                "fullpath": os.path.join(temp_path, "sublevel1", "Pictures"),
                 "files": {"img1.jpg", "img2.jpg", "vid1.mp4"},
                 "subdirs": []
             }]
@@ -95,3 +103,6 @@ def test_dir_with_multiple_subdir_levels(tmpdir):
 
     # THEN
     assert expected == actual.asdict()
+
+
+# TODO: Mark with something

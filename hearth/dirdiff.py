@@ -12,11 +12,13 @@ from typing import List, Set, Tuple
 @dataclass(init=False, eq=False, order=False)
 class Dir:
     dirname: str
+    fullpath: str
     files: Set[str]
     subdirs: List[Dir]
 
     def __init__(self, path):
         self.dirname = basename(path)
+        self.fullpath = path
 
         entries = listdir(path=path)
         self.files = {f for f in entries if isfile(ojoin(path, f))}
