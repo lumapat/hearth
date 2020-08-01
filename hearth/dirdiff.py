@@ -9,20 +9,12 @@ from typing import List, Set, Tuple
 
 
 @total_ordering
-@dataclass(init=False, eq=False, order=False)
+@dataclass(eq=False, order=False)
 class Dir:
     dirname: str
     fullpath: str
     files: Set[str]
     subdirs: List[Dir]
-
-    def __init__(self, path):
-        self.dirname = basename(path)
-        self.fullpath = path
-
-        entries = listdir(path=path)
-        self.files = {f for f in entries if isfile(ojoin(path, f))}
-        self.subdirs = [Dir(ojoin(path, d)) for d in entries if isdir(ojoin(path, d))]
 
     def __eq__(self, other):
         self.dirname.__eq__(other.dirname)
@@ -32,6 +24,16 @@ class Dir:
 
     def asdict(self):
         return asdict(self)
+
+
+# TODO: Docs
+def loaded_dir(path: str) -> Dir:
+        entries = listdir(path=path)
+
+        return Dir(basename(path),
+                   path,
+                   {f for f in entries if isfile(ojoin(path, f))},
+                   [loaded_dir(ojoin(path, d)) for d in entries if isdir(ojoin(path, d))])
 
 
 def left_only(left_dir: Dir, right_dir: Dir) -> Set[str]:

@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import pytest
 
-from hearth.dirdiff import Dir
+from hearth.dirdiff import Dir, loaded_dir
 
 
 def create_dir(path: str, dir_dict: Dict[str, Any]) -> None:
@@ -35,7 +35,7 @@ def test_dir_with_only_files(tmpdir):
     create_dir(temp_path, expected)
 
     # WHEN
-    actual = Dir(temp_path)
+    actual = loaded_dir(temp_path)
 
     # THEN
     assert expected == actual.asdict()
@@ -59,7 +59,7 @@ def test_dir_with_files_and_subdir(tmpdir):
     create_dir(temp_path, expected)
 
     # WHEN
-    actual = Dir(temp_path)
+    actual = loaded_dir(temp_path)
 
     # THEN
     assert expected == actual.asdict()
@@ -99,10 +99,7 @@ def test_dir_with_multiple_subdir_levels(tmpdir):
     create_dir(temp_path, expected)
 
     # WHEN
-    actual = Dir(temp_path)
+    actual = loaded_dir(temp_path)
 
     # THEN
     assert expected == actual.asdict()
-
-
-# TODO: Mark with something
