@@ -17,8 +17,12 @@ def generate_sample_sync_central(path: Path):
         "s1",
         {"s1": sample_path, "s2": sample_path}
     ) for i in range(1,4)}
+    devices = {f"device{i}": sut.Device(
+        f"device{i}",
+        f"/mount/somewhere/device{i}"
+    ) for i in range(1,3)}
 
-    return sut.SyncCentral(path, now, now, sample_infos)
+    return sut.SyncCentral(path, devices, now, now, sample_infos)
 
 
 def test_get_dirsync_toml_that_doesnt_exist(tmpdir):

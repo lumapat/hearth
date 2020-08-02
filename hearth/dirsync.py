@@ -6,6 +6,12 @@ import toml
 
 
 @dataclass
+class Device:
+    name: str
+    mountpoint: str
+
+
+@dataclass
 class SyncInfo:
     name: str
     description: str
@@ -16,6 +22,7 @@ class SyncInfo:
 @dataclass
 class SyncCentral:
     data_file_path: str
+    devices: Dict[str, Device]
     last_modified: datetime
     last_synced: datetime
     sync_infos: Dict[str, SyncInfo]
@@ -41,10 +48,17 @@ def get_sync_central(path: Path) -> SyncCentral:
             ) for name, info in central_dict["sync_infos"].items()
         }
 
+        devices = {
+            name: Device(
+                info["name"],
+                info["mountpoint"]
+            ) for name, info in central_dict["devices"].items()
+        }
+
         last_modified = central_dict["last_modified"]
         last_synced = central_dict["last_synced"]
 
-        return SyncCentral(path, last_modified, last_synced, sync_infos)
+        return SyncCentral(path, devices, last_modified, last_synced, sync_infos)
 
 
 def save_sync_central(central: SyncCentral,
