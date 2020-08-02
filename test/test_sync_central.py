@@ -22,7 +22,7 @@ def generate_sample_sync_central(path: Path):
         f"/mount/somewhere/device{i}"
     ) for i in range(1,3)}
 
-    return sut.SyncCentral(path, devices, now, now, sample_infos)
+    return sut.SyncCentral(str(path), devices, now, now, sample_infos)
 
 
 def test_get_dirsync_toml_that_doesnt_exist(tmpdir):
