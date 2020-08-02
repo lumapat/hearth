@@ -21,10 +21,13 @@ class SyncCentral:
     sync_infos: Dict[str, SyncInfo]
 
 
-# TODO: Use different exceptions
+class SyncError(Exception):
+    pass
+
+
 def get_sync_central(path: Path) -> SyncCentral:
     if not path.is_file():
-        raise Exception("")
+        raise SyncError(f"'{path}' doesn't exist")
 
     with path.open() as f:
         central_dict = toml.load(f)
@@ -44,16 +47,20 @@ def get_sync_central(path: Path) -> SyncCentral:
         return SyncCentral(path, last_modified, last_synced, sync_infos)
 
 
-def save_sync_central(central: SyncCentral) -> None:
+def save_sync_central(central: SyncCentral,
+                      create_if_exists: bool = False) -> None:
     central_dict = asdict(central)
 
     # Don't need to save this
     central_dict["data_file_path"] = None
     path = Path(central.data_file_path)
 
-    # TODO: Make this an option so we can error/prompt appropriately on it
     if not path.exists():
-        path.touch()
+        if create_if_exists:
+            # TODO: Log here
+            path.touch()
+        else:
+            raise SyncError(f"'{path}' doesn't exist")
 
     with path.open(mode="w") as f:
         toml.dump(central_dict, f)
