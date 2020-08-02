@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass, field
 from filecmp import cmpfiles
 from functools import total_ordering
 from os import listdir
@@ -24,6 +24,17 @@ class Dir:
 
     def asdict(self):
         return asdict(self)
+
+
+@dataclass
+class DirDiff:
+    left_files: Set[str] = field(default_factory=set)
+    right_files: Set[str] = field(default_factory=set)
+    common_files: Set[str] = field(default_factory=set)
+
+    left_subdirs: Set[str] = field(default_factory=set)
+    right_subdirs: Set[str] = field(default_factory=set)
+    common_subdirs: Dict[str, Dir] = field(default_factory=dict)
 
 
 # TODO: Docs

@@ -5,7 +5,7 @@ import os
 
 import pytest # type: ignore
 
-from hearth.dirdiff import Dir, loaded_dir
+from hearth.dirdiff import Dir, DirDiff, loaded_dir
 import hearth.dirdiff as sut
 
 
@@ -126,24 +126,13 @@ def diff_fix(tmpdir_factory):
     yield (left_dir, right_dir)
 
 
-@dataclass
-class DiffResult:
-    left_files: Set[str] = field(default_factory=set)
-    right_files: Set[str] = field(default_factory=set)
-    common_files: Set[str] = field(default_factory=set)
-
-    left_subdirs: Set[str] = field(default_factory=set)
-    right_subdirs: Set[str] = field(default_factory=set)
-    common_subdirs: Dict[str, Dir] = field(default_factory=dict)
-
-
 def validate_diffs(left_dir: Dir,
                    right_dir: Dir,
-                   expected_diff: DiffResult) -> DiffResult:
+                   expected_diff: DirDiff) -> DirDiff:
     actual_file_cmp = sut.compare_files(left_dir, right_dir)
     actual_subdir_cmp = sut.compare_subdirs(left_dir, right_dir)
 
-    actual_diff = DiffResult(
+    actual_diff = DirDiff(
         left_files=actual_file_cmp[0],
         right_files=actual_file_cmp[1],
         common_files=actual_file_cmp[2],
@@ -188,7 +177,7 @@ def test_diff_shallow_with_no_common_items(diff_fix,
     create_dir(left_dir.fullpath, left_dir.asdict())
     create_dir(right_dir.fullpath, right_dir.asdict())
 
-    expected_diff = DiffResult()
+    expected_diff = DirDiff()
     expected_diff.left_files = set(left_files)
     expected_diff.right_files = set(right_files)
     expected_diff.left_subdirs = set(left_subdirs)
@@ -215,7 +204,7 @@ def test_diff_only_files(diff_fix, all_diff_contents, matching_groups):
         group: common_files
         for group in matching_groups
     }
-    expected_diff = DiffResult(**expected_matches)
+    expected_diff = DirDiff(**expected_matches)
 
     validate_diffs(left_dir, right_dir, expected_diff)
 
@@ -244,7 +233,7 @@ def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_groups):
     create_dir(right_dir.fullpath, right_dir.asdict(), all_diff_contents=all_diff_contents)
 
     # Diff only cares about keys for common subdirs, so we can ignore the values
-    expected_diff = DiffResult(common_subdirs=subdir_contents)
+    expected_diff = DirDiff(common_subdirs=subdir_contents)
     actual_diff = validate_diffs(left_dir, right_dir, expected_diff)
 
     for d, contents in actual_diff.common_subdirs.items():
@@ -252,7 +241,7 @@ def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_groups):
             group: subdir_contents[d]
             for group in matching_groups
         }
-        expected_diff = DiffResult(**expected_matches)
+        expected_diff = DirDiff(**expected_matches)
 
         validate_diffs(contents[0], contents[1], expected_diff)
 
@@ -290,7 +279,7 @@ def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_groups):
         if left_dir.subdirs and right_dir.subdirs:
             # Still making our way downtown
             common_subdirs = {d.dirname: d for d in left_dir.subdirs}
-            expected_diff = DiffResult(common_subdirs=common_subdirs)
+            expected_diff = DirDiff(common_subdirs=common_subdirs)
             validate_diffs(left_dir, right_dir, expected_diff)
 
             assert len(common_subdirs.keys()) == 1
@@ -301,6 +290,6 @@ def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_groups):
                 group: common_files
                 for group in matching_groups
             }
-            expected_diff = DiffResult(**expected_matches)
+            expected_diff = DirDiff(**expected_matches)
 
     validate_nest(left_dir, right_dir)
