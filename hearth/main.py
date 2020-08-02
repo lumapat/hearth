@@ -1,16 +1,31 @@
+from datetime import datetime
+from pathlib import Path
 from os import curdir, path
 
 import click
 import filecmp
+import logging
 import psutil # type: ignore
 import pprint
 import shutil
+import sys
 
-pp = pprint.PrettyPrinter(indent=4)
+from hearth import sync_central
+
+pp: pprint.PrettyPrinter = pprint.PrettyPrinter(indent=4)
+DEFAULT_SAVE_FILENAME = ".hearth-central.toml"
+DEFAULT_SAVE_PATH: Path = Path.home() / DEFAULT_SAVE_FILENAME
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(stream=sys.stdout,
+                    level=logging.DEBUG,
+                    format="%(asctime)s - %(message)s")
+
 
 @click.group()
 def root():
     pass
+
 
 @click.command(
     name="compare",
@@ -21,6 +36,30 @@ def root():
 def compare_cmd(src, target):
     res = filecmp.dircmp(src, target)
     res.report_full_closure()
+
+
+@click.command(
+    name="init",
+    short_help="Initialize hearth on the current system"
+)
+def init_cmd():
+    devices = {
+        p.device: sync_central.Device(p.device, p.mountpoint)
+        for p in psutil.disk_partitions()
+    }
+
+    now = datetime.now()
+    central = sync_central.SyncCentral(
+        str(DEFAULT_SAVE_PATH),
+        devices,
+        now,
+        now,
+        {}
+    )
+
+    sync_central.save_sync_central(central, create_if_exists=True)
+    logger.info(f"Initialized hearth into '{DEFAULT_SAVE_PATH}'")
+
 
 # Roadmap for list:
 # Create a centralized YAML to store this (for now)
@@ -41,9 +80,17 @@ def compare_cmd(src, target):
     short_help="List the storage devices and save points in a system"
 )
 def list_cmd():
-    # Use psutil
-    partitions = psutil.disk_partitions()
-    pp.pprint(partitions)
+    try:
+        central = sync_central.get_sync_central(DEFAULT_SAVE_PATH)
+
+        # TODO: Print better than this
+        pp.pprint(central)
+    except sync_central.SyncError:
+        logger.info("Current system is uninitialized."
+                    " Could not retrieve any save points or system details."
+                    " Please run 'hearth init' to initialize first.")
+        return
+
 
 # TODO: Implement a sync
 #
@@ -97,6 +144,7 @@ def sync_cmd(master, backup, no_commit):
 
 def main():
     root.add_command(compare_cmd)
+    root.add_command(init_cmd)
     root.add_command(list_cmd)
     root.add_command(sync_cmd)
     root()
