@@ -1,4 +1,5 @@
-from typing import Any, Dict
+from dataclasses import dataclass, field
+from typing import Any, Dict, Set
 from pathlib import Path
 import os
 
@@ -125,6 +126,42 @@ def diff_fix(tmpdir_factory):
     yield (left_dir, right_dir)
 
 
+@dataclass
+class DiffResult:
+    left_files: Set[str] = field(default_factory=set)
+    right_files: Set[str] = field(default_factory=set)
+    common_files: Set[str] = field(default_factory=set)
+
+    left_subdirs: Set[str] = field(default_factory=set)
+    right_subdirs: Set[str] = field(default_factory=set)
+    common_subdirs: Dict[str, Dir] = field(default_factory=dict)
+
+
+def validate_diffs(left_dir: Dir,
+                   right_dir: Dir,
+                   expected_diff: DiffResult) -> DiffResult:
+    actual_file_cmp = sut.compare_files(left_dir, right_dir)
+
+    actual_diff = DiffResult(
+        left_files=actual_file_cmp[0],
+        right_files=actual_file_cmp[1],
+        common_files=actual_file_cmp[2],
+        left_subdirs=sut.left_dirs_only(left_dir, right_dir),
+        right_subdirs=sut.right_dirs_only(left_dir, right_dir),
+        common_subdirs=sut.common_dirs(left_dir, right_dir)
+    )
+
+    assert expected_diff.left_files == actual_diff.left_files
+    assert expected_diff.right_files == actual_diff.right_files
+    assert expected_diff.common_files == actual_diff.common_files
+
+    assert expected_diff.left_subdirs == actual_diff.left_subdirs
+    assert expected_diff.right_subdirs == actual_diff.right_subdirs
+    assert expected_diff.common_subdirs.keys() == actual_diff.common_subdirs.keys()
+
+    return actual_diff
+
+
 @pytest.mark.parametrize("left_files, right_files, left_subdirs, right_subdirs", [
     (["f.txt", "g.txt"], [], [], []),
     ([], ["f.txt", "g.txt"], [], []),
@@ -150,145 +187,73 @@ def test_diff_shallow_with_no_common_items(diff_fix,
     create_dir(left_dir.fullpath, left_dir.asdict())
     create_dir(right_dir.fullpath, right_dir.asdict())
 
-    actual_left_files, actual_right_files, actual_common = sut.compare_files(left_dir, right_dir)
+    expected_diff = DiffResult()
+    expected_diff.left_files = set(left_files)
+    expected_diff.right_files = set(right_files)
+    expected_diff.left_subdirs = set(left_subdirs)
+    expected_diff.right_subdirs = set(right_subdirs)
 
-    assert set(left_files) == actual_left_files
-    assert set(right_files) == actual_right_files
-    assert not actual_common
-
-    assert set(left_subdirs) == sut.left_dirs_only(left_dir, right_dir)
-    assert set(right_subdirs) == sut.right_dirs_only(left_dir, right_dir)
+    validate_diffs(left_dir, right_dir, expected_diff)
 
 
-def test_diff_common_files_with_diff_contents(diff_fix):
+@pytest.mark.parametrize("all_diff_contents, matching_groups", [
+    (True, ["left_files", "right_files"]),
+    (False, ["common_files"])
+])
+def test_diff_only_files(diff_fix, all_diff_contents, matching_groups):
     common_files = set(["common.py", "common.txt", "common.mp4"])
 
     left_dir, right_dir = diff_fix
     left_dir.files = common_files
     right_dir.files = common_files
 
-    create_dir(left_dir.fullpath, left_dir.asdict(), all_diff_contents=True)
-    create_dir(right_dir.fullpath, right_dir.asdict(), all_diff_contents=True)
+    create_dir(left_dir.fullpath, left_dir.asdict(), all_diff_contents=all_diff_contents)
+    create_dir(right_dir.fullpath, right_dir.asdict(), all_diff_contents=all_diff_contents)
 
-    actual_left_files, actual_right_files, actual_common = sut.compare_files(left_dir, right_dir)
+    expected_matches = {
+        group: common_files
+        for group in matching_groups
+    }
+    expected_diff = DiffResult(**expected_matches)
 
-    assert common_files == actual_left_files
-    assert common_files == actual_right_files
-    assert not actual_common
-
-    assert not sut.left_dirs_only(left_dir, right_dir)
-    assert not sut.right_dirs_only(left_dir, right_dir)
-
-
-def test_diff_common_files_with_same_contents(diff_fix):
-    common_files = set(["common.py", "common.txt", "common.mp4"])
-
-    left_dir, right_dir = diff_fix
-    left_dir.files = common_files
-    right_dir.files = common_files
-
-    create_dir(left_dir.fullpath, left_dir.asdict(), all_diff_contents=False)
-    create_dir(right_dir.fullpath, right_dir.asdict(), all_diff_contents=False)
-
-    actual_left_files, actual_right_files, actual_common = sut.compare_files(left_dir, right_dir)
-
-    assert not actual_left_files
-    assert not actual_right_files
-    assert common_files == actual_common
-
-    assert not sut.left_dirs_only(left_dir, right_dir)
-    assert not sut.right_dirs_only(left_dir, right_dir)
+    validate_diffs(left_dir, right_dir, expected_diff)
 
 
-def test_diff_common_subdirs_with_diffs(diff_fix):
-    common_subdir_names = ["subdir_a", "subdir-b", "SUBDIR.C"]
-    file_suffixes = [".mp4", ".jpg", ".py"]
+@pytest.mark.parametrize("all_diff_contents, matching_groups", [
+    (True, ["left_files", "right_files"]),
+    (False, ["common_files"])
+])
+def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_groups):
+    subdir_contents = {
+        sub_name: set(f"{sub_name}.file{suffix}" for suffix in [".mp4", ".jpg", ".py"])
+        for sub_name in ["subdir_a", "subdir-b", "SUBDIR.C"]
+    }
 
     left_dir, right_dir = diff_fix
-
     left_dir.subdirs = [
-        Dir(d,
-            os.path.join(left_dir.fullpath, d),
-            set(f"{d}{suffix}" for suffix in file_suffixes),
-            [])
-        for d in common_subdir_names]
+        Dir(d, os.path.join(left_dir.fullpath, d), files, [])
+        for d, files in subdir_contents.items()
+    ]
     right_dir.subdirs = [
-        Dir(d,
-            os.path.join(right_dir.fullpath, d),
-            set(f"{d}{suffix}" for suffix in file_suffixes),
-            [])
-        for d in common_subdir_names]
+        Dir(d, os.path.join(right_dir.fullpath, d), files, [])
+        for d, files in subdir_contents.items()
+    ]
 
-    create_dir(left_dir.fullpath, left_dir.asdict(), all_diff_contents=True)
-    create_dir(right_dir.fullpath, right_dir.asdict(), all_diff_contents=True)
+    create_dir(left_dir.fullpath, left_dir.asdict(), all_diff_contents=all_diff_contents)
+    create_dir(right_dir.fullpath, right_dir.asdict(), all_diff_contents=all_diff_contents)
 
-    actual_left_files, actual_right_files, actual_common = sut.compare_files(left_dir, right_dir)
+    # Diff only cares about keys for common subdirs, so we can ignore the values
+    expected_diff = DiffResult(common_subdirs=subdir_contents)
+    actual_diff = validate_diffs(left_dir, right_dir, expected_diff)
 
-    assert not actual_left_files
-    assert not actual_right_files
-    assert not actual_common
+    for d, contents in actual_diff.common_subdirs.items():
+        expected_matches = {
+            group: subdir_contents[d]
+            for group in matching_groups
+        }
+        expected_diff = DiffResult(**expected_matches)
 
-    assert not sut.left_dirs_only(left_dir, right_dir)
-    assert not sut.right_dirs_only(left_dir, right_dir)
-
-    common_subdirs = sut.common_dirs(left_dir, right_dir)
-
-    for d, contents in common_subdirs.items():
-        assert not contents[0].subdirs
-        assert not contents[1].subdirs
-
-        # TODO: Make an actual expected value for this test
-        actual_left_files, actual_right_files, actual_common = sut.compare_files(contents[0], contents[1])
-        assert actual_left_files
-        assert actual_right_files
-        assert not actual_common
-
-
-def test_diff_common_subdirs_with_same_contents(diff_fix):
-    common_subdir_names = ["subdir_a", "subdir-b", "SUBDIR.C"]
-    file_suffixes = [".mp4", ".jpg", ".py"]
-
-    left_dir, right_dir = diff_fix
-
-    left_dir.subdirs = [
-        Dir(d,
-            os.path.join(left_dir.fullpath, d),
-            set(f"{d}{suffix}" for suffix in file_suffixes),
-            [])
-        for d in common_subdir_names]
-    right_dir.subdirs = [
-        Dir(d,
-            os.path.join(right_dir.fullpath, d),
-            set(f"{d}{suffix}" for suffix in file_suffixes),
-            [])
-        for d in common_subdir_names]
-
-    create_dir(left_dir.fullpath, left_dir.asdict(), all_diff_contents=False)
-    create_dir(right_dir.fullpath, right_dir.asdict(), all_diff_contents=False)
-
-    # TODO: Make these names better and consistent?
-    actual_left_files, actual_right_files, actual_common = sut.compare_files(left_dir, right_dir)
-
-    assert not actual_left_files
-    assert not actual_right_files
-    assert not actual_common
-
-    assert not sut.left_dirs_only(left_dir, right_dir)
-    assert not sut.right_dirs_only(left_dir, right_dir)
-
-    common_subdirs = sut.common_dirs(left_dir, right_dir)
-
-    for d, contents in common_subdirs.items():
-        assert not contents[0].subdirs
-        assert not contents[1].subdirs
-
-        actual_left_files, actual_right_files, files_in_both = sut.compare_files(contents[0], contents[1])
-
-        assert not actual_left_files
-        assert not actual_right_files
-
-        assert contents[0].files == files_in_both
-        assert contents[1].files == files_in_both
+        validate_diffs(contents[0], contents[1], expected_diff)
 
 
 # def test_diff_deep_subdir_tree_with_diffs(diff_fix):
