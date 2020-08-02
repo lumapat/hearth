@@ -36,7 +36,8 @@ def loaded_dir(path: str) -> Dir:
                 [loaded_dir(ojoin(path, d)) for d in entries if isdir(ojoin(path, d))])
 
 
-def compare_files(left_dir: Dir, right_dir: Dir) -> Tuple[Set[str], Set[str], Set[str]]:
+def compare_files(left_dir: Dir,
+                  right_dir: Dir) -> Tuple[Set[str], Set[str], Set[str]]:
     match, _, _ = cmpfiles(left_dir.fullpath,
                            right_dir.fullpath,
                            left_dir.files & right_dir.files,
@@ -48,28 +49,22 @@ def compare_files(left_dir: Dir, right_dir: Dir) -> Tuple[Set[str], Set[str], Se
 
     return left_only, right_only, both
 
-
-def left_dirs_only(left_dir: Dir, right_dir: Dir) -> Set[str]:
-    left_subdir_set = set(d.dirname for d in left_dir.subdirs)
-    right_subdir_set = set(d.dirname for d in right_dir.subdirs)
-    return left_subdir_set - right_subdir_set
-
-
-def right_dirs_only(left_dir: Dir, right_dir: Dir) -> Set[str]:
-    left_subdir_set = set(d.dirname for d in left_dir.subdirs)
-    right_subdir_set = set(d.dirname for d in right_dir.subdirs)
-    return right_subdir_set - left_subdir_set
-
-
-def common_dirs(left_dir: Dir, right_dir: Dir) -> Dict[str, Tuple[Dir, Dir]]:
+def compare_subdirs(left_dir: Dir,
+                    right_dir: Dir) -> Tuple[Set[str], Set[str], Dict[str, Tuple[Dir, Dir]]]:
     """ TODO: Docs
 
         Returns:
             A dict of common subdirectory names to a pair consisting of the left and right
             subdir in their respective positions
     """
-    left_subdir_dict = {d.dirname: d for d in left_dir.subdirs}
-    right_subdir_dict = {d.dirname: d for d in right_dir.subdirs}
-    common_dir_names = left_subdir_dict.keys() & right_subdir_dict.keys()
 
-    return {d: (left_subdir_dict[d], right_subdir_dict[d]) for d in common_dir_names}
+    left_subdirs = {d.dirname: d for d in left_dir.subdirs}
+    right_subdirs = {d.dirname: d for d in right_dir.subdirs}
+
+    common_dir_names = left_subdirs.keys() & right_subdirs.keys()
+
+    left_only_subdirs = set(left_subdirs.keys() - right_subdirs.keys())
+    right_only_subdirs = set(right_subdirs.keys() - left_subdirs.keys())
+    common_subdirs = {d: (left_subdirs[d], right_subdirs[d]) for d in common_dir_names}
+
+    return left_only_subdirs, right_only_subdirs, common_subdirs

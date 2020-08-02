@@ -3,7 +3,7 @@ from typing import Any, Dict, Set
 from pathlib import Path
 import os
 
-import pytest
+import pytest # type: ignore
 
 from hearth.dirdiff import Dir, loaded_dir
 import hearth.dirdiff as sut
@@ -141,14 +141,15 @@ def validate_diffs(left_dir: Dir,
                    right_dir: Dir,
                    expected_diff: DiffResult) -> DiffResult:
     actual_file_cmp = sut.compare_files(left_dir, right_dir)
+    actual_subdir_cmp = sut.compare_subdirs(left_dir, right_dir)
 
     actual_diff = DiffResult(
         left_files=actual_file_cmp[0],
         right_files=actual_file_cmp[1],
         common_files=actual_file_cmp[2],
-        left_subdirs=sut.left_dirs_only(left_dir, right_dir),
-        right_subdirs=sut.right_dirs_only(left_dir, right_dir),
-        common_subdirs=sut.common_dirs(left_dir, right_dir)
+        left_subdirs=actual_subdir_cmp[0],
+        right_subdirs=actual_subdir_cmp[1],
+        common_subdirs=actual_subdir_cmp[2] # type: ignore
     )
 
     assert expected_diff.left_files == actual_diff.left_files
@@ -181,8 +182,8 @@ def test_diff_shallow_with_no_common_items(diff_fix,
     left_dir.files = set(left_files)
     right_dir.files = set(right_files)
 
-    left_dir.subdirs = [Dir(d, os.path.join(left_dir.fullpath, d), {}, []) for d in left_subdirs]
-    right_dir.subdirs = [Dir(d, os.path.join(right_dir.fullpath, d), {}, []) for d in right_subdirs]
+    left_dir.subdirs = [Dir(d, os.path.join(left_dir.fullpath, d), set(), []) for d in left_subdirs]
+    right_dir.subdirs = [Dir(d, os.path.join(right_dir.fullpath, d), set(), []) for d in right_subdirs]
 
     create_dir(left_dir.fullpath, left_dir.asdict())
     create_dir(right_dir.fullpath, right_dir.asdict())

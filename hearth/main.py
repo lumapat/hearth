@@ -2,7 +2,7 @@ from os import curdir, path
 
 import click
 import filecmp
-import psutil
+import psutil # type: ignore
 import pprint
 import shutil
 
