@@ -5,7 +5,7 @@ import datetime as dt
 
 import pytest # type: ignore
 
-import hearth.dirsync as sut
+import hearth.sync_central as sut
 
 
 def generate_sample_sync_central(path: Path):
