@@ -31,9 +31,9 @@ def loaded_dir(path: str) -> Dir:
     entries = listdir(path=path)
 
     return Dir(basename(path),
-                path,
-                {f for f in entries if isfile(ojoin(path, f))},
-                [loaded_dir(ojoin(path, d)) for d in entries if isdir(ojoin(path, d))])
+               path,
+               {f for f in entries if isfile(ojoin(path, f))},
+               [loaded_dir(ojoin(path, d)) for d in entries if isdir(ojoin(path, d))])
 
 
 def compare_files(left_dir: Dir,
