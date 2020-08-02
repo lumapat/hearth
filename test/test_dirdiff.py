@@ -3,7 +3,7 @@ from typing import Any, Dict, Set
 from pathlib import Path
 import os
 
-import pytest # type: ignore
+import pytest  # type: ignore
 
 from hearth.dirdiff import Dir, DirDiff, loaded_dir
 import hearth.dirdiff as sut
@@ -98,7 +98,7 @@ def test_dir_with_multiple_subdir_levels(tmpdir):
                     "subdirs": []
                 }]
             },
-            {
+                {
                 "dirname": "Pictures",
                 "fullpath": os.path.join(temp_path, "sublevel1", "Pictures"),
                 "files": {"img1.jpg", "img2.jpg", "vid1.mp4"},
@@ -138,7 +138,7 @@ def validate_diffs(left_dir: Dir,
         common_files=actual_file_cmp[2],
         left_subdirs=actual_subdir_cmp[0],
         right_subdirs=actual_subdir_cmp[1],
-        common_subdirs=actual_subdir_cmp[2] # type: ignore
+        common_subdirs=actual_subdir_cmp[2]  # type: ignore
     )
 
     assert expected_diff.left_files == actual_diff.left_files
@@ -159,7 +159,8 @@ def validate_diffs(left_dir: Dir,
     ([], [], ["subdir_a", "subdir_b"], []),
     ([], [], [], ["subdir_a", "subdir_b"]),
     ([], [], ["subdir_a", "subdir_b"], ["subdir_c", "subdir_d"]),
-    (["a.tsk", "b.cpp"], ["f.png", "g.md"], ["subdir_a", "subdir_b"], ["subdir_c", "subdir_d"])
+    (["a.tsk", "b.cpp"], ["f.png", "g.md"], [
+     "subdir_a", "subdir_b"], ["subdir_c", "subdir_d"])
 ])
 def test_diff_shallow_with_no_common_items(diff_fix,
                                            left_files,
@@ -171,8 +172,10 @@ def test_diff_shallow_with_no_common_items(diff_fix,
     left_dir.files = set(left_files)
     right_dir.files = set(right_files)
 
-    left_dir.subdirs = [Dir(d, os.path.join(left_dir.fullpath, d), set(), []) for d in left_subdirs]
-    right_dir.subdirs = [Dir(d, os.path.join(right_dir.fullpath, d), set(), []) for d in right_subdirs]
+    left_dir.subdirs = [
+        Dir(d, os.path.join(left_dir.fullpath, d), set(), []) for d in left_subdirs]
+    right_dir.subdirs = [
+        Dir(d, os.path.join(right_dir.fullpath, d), set(), []) for d in right_subdirs]
 
     create_dir(left_dir.fullpath, left_dir.asdict())
     create_dir(right_dir.fullpath, right_dir.asdict())
@@ -197,8 +200,10 @@ def test_diff_only_files(diff_fix, all_diff_contents, matching_groups):
     left_dir.files = common_files
     right_dir.files = common_files
 
-    create_dir(left_dir.fullpath, left_dir.asdict(), all_diff_contents=all_diff_contents)
-    create_dir(right_dir.fullpath, right_dir.asdict(), all_diff_contents=all_diff_contents)
+    create_dir(left_dir.fullpath, left_dir.asdict(),
+               all_diff_contents=all_diff_contents)
+    create_dir(right_dir.fullpath, right_dir.asdict(),
+               all_diff_contents=all_diff_contents)
 
     expected_matches = {
         group: common_files
@@ -215,7 +220,8 @@ def test_diff_only_files(diff_fix, all_diff_contents, matching_groups):
 ])
 def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_groups):
     subdir_contents = {
-        sub_name: set(f"{sub_name}.file{suffix}" for suffix in [".mp4", ".jpg", ".py"])
+        sub_name: set(f"{sub_name}.file{suffix}" for suffix in [
+                      ".mp4", ".jpg", ".py"])
         for sub_name in ["subdir_a", "subdir-b", "SUBDIR.C"]
     }
 
@@ -229,8 +235,10 @@ def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_groups):
         for d, files in subdir_contents.items()
     ]
 
-    create_dir(left_dir.fullpath, left_dir.asdict(), all_diff_contents=all_diff_contents)
-    create_dir(right_dir.fullpath, right_dir.asdict(), all_diff_contents=all_diff_contents)
+    create_dir(left_dir.fullpath, left_dir.asdict(),
+               all_diff_contents=all_diff_contents)
+    create_dir(right_dir.fullpath, right_dir.asdict(),
+               all_diff_contents=all_diff_contents)
 
     # Diff only cares about keys for common subdirs, so we can ignore the values
     expected_diff = DirDiff(common_subdirs=subdir_contents)
@@ -256,7 +264,7 @@ def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_groups):
 
     # Nest 3 levels deep
     def init_nested_subdirs(dir_ptr):
-        for i in range(1,4):
+        for i in range(1, 4):
             subdir_name = f"subdir{i}"
             dir_ptr.subdirs = [Dir(
                 subdir_name,
@@ -272,8 +280,10 @@ def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_groups):
     init_nested_subdirs(left_dir)
     init_nested_subdirs(right_dir)
 
-    create_dir(left_dir.fullpath, left_dir.asdict(), all_diff_contents=all_diff_contents)
-    create_dir(right_dir.fullpath, right_dir.asdict(), all_diff_contents=all_diff_contents)
+    create_dir(left_dir.fullpath, left_dir.asdict(),
+               all_diff_contents=all_diff_contents)
+    create_dir(right_dir.fullpath, right_dir.asdict(),
+               all_diff_contents=all_diff_contents)
 
     def validate_nest(left_dir: Dir, right_dir: Dir):
         if left_dir.subdirs and right_dir.subdirs:

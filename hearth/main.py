@@ -5,7 +5,7 @@ from os import curdir, path
 import click
 import filecmp
 import logging
-import psutil # type: ignore
+import psutil  # type: ignore
 import pprint
 import shutil
 import sys
@@ -128,7 +128,8 @@ def sync_cmd(master, backup, no_commit):
     res = flatten_left_only(filecmp.dircmp(master, backup), "")
 
     if no_commit:
-        print(f"Syncing the following data from {master} to {backup}: {pp.pformat(res)}")
+        print(
+            f"Syncing the following data from {master} to {backup}: {pp.pformat(res)}")
     else:
         print(f"Syncing {master} contents to {backup}...")
         for e in res:
@@ -142,12 +143,14 @@ def sync_cmd(master, backup, no_commit):
                 shutil.copytree(master_copy, backup_copy)
                 print(f"Directory {master_copy} >>>> {backup_copy}")
 
+
 def main():
     root.add_command(compare_cmd)
     root.add_command(init_cmd)
     root.add_command(list_cmd)
     root.add_command(sync_cmd)
     root()
+
 
 if __name__ == "__main__":
     main()

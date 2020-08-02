@@ -60,6 +60,7 @@ def compare_files(left_dir: Dir,
 
     return left_only, right_only, both
 
+
 def compare_subdirs(left_dir: Dir,
                     right_dir: Dir) -> Tuple[Set[str], Set[str], Dict[str, Tuple[Dir, Dir]]]:
     """ TODO: Docs
@@ -76,6 +77,7 @@ def compare_subdirs(left_dir: Dir,
 
     left_only_subdirs = set(left_subdirs.keys() - right_subdirs.keys())
     right_only_subdirs = set(right_subdirs.keys() - left_subdirs.keys())
-    common_subdirs = {d: (left_subdirs[d], right_subdirs[d]) for d in common_dir_names}
+    common_subdirs = {d: (left_subdirs[d], right_subdirs[d])
+                      for d in common_dir_names}
 
     return left_only_subdirs, right_only_subdirs, common_subdirs

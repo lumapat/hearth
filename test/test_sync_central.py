@@ -3,7 +3,7 @@ from typing import Any, Dict, Set
 from pathlib import Path
 import datetime as dt
 
-import pytest # type: ignore
+import pytest  # type: ignore
 
 import hearth.sync_central as sut
 
@@ -16,11 +16,11 @@ def generate_sample_sync_central(path: Path):
         f"Sample {i} description. Beep boop",
         "s1",
         {"s1": sample_path, "s2": sample_path}
-    ) for i in range(1,4)}
+    ) for i in range(1, 4)}
     devices = {f"device{i}": sut.Device(
         f"device{i}",
         f"/mount/somewhere/device{i}"
-    ) for i in range(1,3)}
+    ) for i in range(1, 3)}
 
     return sut.SyncCentral(str(path), devices, now, now, sample_infos)
 
