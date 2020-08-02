@@ -256,11 +256,50 @@ def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_groups):
         validate_diffs(contents[0], contents[1], expected_diff)
 
 
-# def test_diff_deep_subdir_tree_with_diffs(diff_fix):
-#     left_dir, right_dir = diff_fix
+@pytest.mark.parametrize("all_diff_contents, matching_groups", [
+    (True, ["left_files", "right_files"]),
+    (False, ["common_files"])
+])
+def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_groups):
+    left_dir, right_dir = diff_fix
+    common_files = set(["woah.jpg", "mad.png", "deep.arw"])
 
+    # Nest 3 levels deep
+    def init_nested_subdirs(dir_ptr):
+        for i in range(1,4):
+            subdir_name = f"subdir{i}"
+            dir_ptr.subdirs = [Dir(
+                subdir_name,
+                os.path.join(dir_ptr.fullpath, subdir_name),
+                set(),
+                []
+            )]
+            dir_ptr = dir_ptr.subdirs[0]
 
-# TEST CASES:
-#  - Mix of common files, common subdirs, diff files, diff subdirs (1 sublevel)
-#  - Deep subdir level (3) with diffs
-#  - Deep subdir level (3) without diffs
+        # At the deepest level
+        dir_ptr.files = common_files
+
+    init_nested_subdirs(left_dir)
+    init_nested_subdirs(right_dir)
+
+    create_dir(left_dir.fullpath, left_dir.asdict(), all_diff_contents=all_diff_contents)
+    create_dir(right_dir.fullpath, right_dir.asdict(), all_diff_contents=all_diff_contents)
+
+    def validate_nest(left_dir: Dir, right_dir: Dir):
+        if left_dir.subdirs and right_dir.subdirs:
+            # Still making our way downtown
+            common_subdirs = {d.dirname: d for d in left_dir.subdirs}
+            expected_diff = DiffResult(common_subdirs=common_subdirs)
+            validate_diffs(left_dir, right_dir, expected_diff)
+
+            assert len(common_subdirs.keys()) == 1
+            validate_nest(left_dir.subdirs[0], right_dir.subdirs[0])
+        else:
+            # Now we're in downtown
+            expected_matches = {
+                group: common_files
+                for group in matching_groups
+            }
+            expected_diff = DiffResult(**expected_matches)
+
+    validate_nest(left_dir, right_dir)
