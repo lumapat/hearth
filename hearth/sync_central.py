@@ -52,7 +52,7 @@ def get_sync_central(path: Path) -> SyncCentral:
         last_modified = central_dict["last_modified"]
         last_synced = central_dict["last_synced"]
 
-        return SyncCentral(path, devices, last_modified, last_synced, sync_infos)
+        return SyncCentral(str(path), devices, last_modified, last_synced, sync_infos)
 
 
 def save_sync_central(central: SyncCentral,
