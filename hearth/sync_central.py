@@ -40,19 +40,13 @@ def get_sync_central(path: Path) -> SyncCentral:
         central_dict = toml.load(f)
 
         sync_infos = {
-            name: SyncInfo(
-                name,
-                info["description"],
-                info["primary_source"],
-                {src_name: src_path for src_name, src_path in info["sources"].items()}
-            ) for name, info in central_dict["sync_infos"].items()
+            name: SyncInfo(**info)
+            for name, info in central_dict["sync_infos"].items()
         }
 
         devices = {
-            name: Device(
-                info["name"],
-                info["mountpoint"]
-            ) for name, info in central_dict["devices"].items()
+            name: Device(**info)
+            for name, info in central_dict["devices"].items()
         }
 
         last_modified = central_dict["last_modified"]
