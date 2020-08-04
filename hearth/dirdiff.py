@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from filecmp import cmpfiles
 from functools import total_ordering
 from os import listdir
 from os.path import basename, isdir, isfile, join as ojoin
-from typing import Dict, List, Set, Tuple
+from typing import Dict, Generator, List, Set, Tuple
 
 
 @total_ordering
@@ -24,18 +24,6 @@ class Dir:
 
     def asdict(self):
         return asdict(self)
-
-
-@dataclass
-class DirDiff:
-    left_files: Set[str] = field(default_factory=set)
-    right_files: Set[str] = field(default_factory=set)
-    common_files: Set[str] = field(default_factory=set)
-
-    left_subdirs: Set[str] = field(default_factory=set)
-    right_subdirs: Set[str] = field(default_factory=set)
-    common_subdirs: Dict[str, Dir] = field(default_factory=dict)
-
 
 # TODO: Docs
 def loaded_dir(path: str) -> Dir:
@@ -81,3 +69,22 @@ def compare_subdirs(left_dir: Dir,
                       for d in common_dir_names}
 
     return left_only_subdirs, right_only_subdirs, common_subdirs
+
+
+# def diff_walk(src_dir: Dir,
+#               cmp_dir: Dir,
+#               full_paths: bool = False) -> Generator[DirDiff, None, None]:
+#     changed_files, new_files, old_files = compare_files(src_dir, cmp_dir)
+#     left_subdirs, right_subdirs, common_subdirs = compare_subdirs(src_dir, cmp_dir)
+
+#     # Ignore common subdirs as we're recursing through them
+#     yield DirDiff(
+#         left_files=changed_files,
+#         right_files=new_files,
+#         common_files=old_files,
+#         left_subdirs=left_subdirs,
+#         right_subdirs=right_subdirs
+#     )
+
+#     for left_subdir, right_subdir in common_subdirs.values():
+#         yield from diff_walk(left_subdir, right_subdir)

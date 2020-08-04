@@ -5,8 +5,19 @@ import os
 
 import pytest  # type: ignore
 
-from hearth.dirdiff import Dir, DirDiff, loaded_dir
+from hearth.dirdiff import Dir, loaded_dir
 import hearth.dirdiff as sut
+
+
+@dataclass
+class DirDiff:
+    left_files: Set[str] = field(default_factory=set)
+    right_files: Set[str] = field(default_factory=set)
+    common_files: Set[str] = field(default_factory=set)
+
+    left_subdirs: Set[str] = field(default_factory=set)
+    right_subdirs: Set[str] = field(default_factory=set)
+    common_subdirs: Dict[str, Dir] = field(default_factory=dict)
 
 
 def create_dir(path: str,
