@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from filecmp import cmpfiles
-from functools import total_ordering
+from functools import reduce, total_ordering
 from os import listdir
 from os.path import basename, isdir, isfile, join as ojoin
 from typing import Dict, Generator, List, Set, Tuple
@@ -24,6 +24,19 @@ class Dir:
 
     def asdict(self):
         return asdict(self)
+
+
+@dataclass
+class DirDiff:
+    changed_files: Set[str] = field(default_factory=set)
+    missing_files: Set[str] = field(default_factory=set)
+    new_files: Set[str] = field(default_factory=set)
+    shared_files: Set[str] = field(default_factory=set)
+
+    missing_dirs: Set[str] = field(default_factory=set)
+    new_dirs: Set[str] = field(default_factory=set)
+    shared_dirs: Dict[str, Tuple[str, str]] = field(default_factory=dict)
+
 
 # TODO: Docs
 def loaded_dir(path: str) -> Dir:
@@ -71,20 +84,39 @@ def compare_subdirs(left_dir: Dir,
     return left_only_subdirs, right_only_subdirs, common_subdirs
 
 
-# def diff_walk(src_dir: Dir,
-#               cmp_dir: Dir,
-#               full_paths: bool = False) -> Generator[DirDiff, None, None]:
-#     changed_files, new_files, old_files = compare_files(src_dir, cmp_dir)
-#     left_subdirs, right_subdirs, common_subdirs = compare_subdirs(src_dir, cmp_dir)
+def diff_walk(src_dir: Dir,
+              cmp_dir: Dir,
+              full_paths: bool = False) -> Generator[DirDiff, None, None]:
+    left_files, right_files, common_files = compare_files(src_dir, cmp_dir)
+    left_subdirs, right_subdirs, common_subdirs = compare_subdirs(src_dir, cmp_dir)
 
-#     # Ignore common subdirs as we're recursing through them
-#     yield DirDiff(
-#         left_files=changed_files,
-#         right_files=new_files,
-#         common_files=old_files,
-#         left_subdirs=left_subdirs,
-#         right_subdirs=right_subdirs
-#     )
+    # Ignore common subdirs as we're recursing through them
+    yield DirDiff(
+        changed_files=left_files & right_files,
+        missing_files=left_files - right_files,
+        new_files=right_files - left_files,
+        shared_files=common_files,
+        missing_dirs=left_subdirs,
+        new_dirs=right_subdirs,
+        shared_dirs={d: (t[0].dirname, t[1].dirname) for d,t in common_subdirs.items()}
+    )
 
-#     for left_subdir, right_subdir in common_subdirs.values():
-#         yield from diff_walk(left_subdir, right_subdir)
+    for left_subdir, right_subdir in common_subdirs.values():
+        yield from diff_walk(left_subdir, right_subdir)
+
+
+def full_diff_dirs(src_dir: Dir,
+                   cmp_dir: Dir,
+                   full_paths: bool = False) -> DirDiff:
+    def combine_diffs(d1: DirDiff, d2: DirDiff) -> DirDiff:
+        d1.changed_files |= d2.changed_files
+        d1.missing_files |= d2.missing_files
+        d1.new_files |= d2.new_files
+        d1.shared_files |= d2.shared_files
+        d1.missing_dirs |= d2.missing_dirs
+        d1.new_dirs |= d2.new_dirs
+        d1.shared_dirs.update(d2.shared_dirs)
+
+        return d1
+
+    return reduce(combine_diffs, diff_walk(src_dir, cmp_dir, full_paths=full_paths))
