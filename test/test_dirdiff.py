@@ -1,46 +1,20 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, Set
 from pathlib import Path
+from typing import Any, Dict, Set
 import os
 
 import pytest  # type: ignore
 
-from hearth.dirdiff import Dir, loaded_dir
+from hearth.dirdiff import (
+    Dir,
+    DirDiff,
+    FilesDiff,
+    SubdirDiff,
+    loaded_dir
+)
+from helpers.dir_schemas import create_dir
 import hearth.dirdiff as sut
-
-
-@dataclass
-class DiffResult:
-    left_files: Set[str] = field(default_factory=set)
-    right_files: Set[str] = field(default_factory=set)
-    common_files: Set[str] = field(default_factory=set)
-
-    left_subdirs: Set[str] = field(default_factory=set)
-    right_subdirs: Set[str] = field(default_factory=set)
-    common_subdirs: Dict[str, Dir] = field(default_factory=dict)
-
-
-def create_dir(path: str,
-               dir_dict: Dict[str, Any],
-               all_diff_contents: bool = False) -> None:
-    """ Creates a directory in the specified path
-
-    :param path: Path to create directory in
-    :param dir_dict: Specification of contents to create in directory
-    """
-
-    for f in dir_dict["files"]:
-        fp = Path(os.path.join(path, f))
-        if all_diff_contents:
-            fp.write_text(str(fp))
-        else:
-            fp.touch()
-
-    for contents in dir_dict["subdirs"]:
-        subdir_path = os.path.join(path, contents["dirname"])
-        Path(subdir_path).mkdir()
-
-        create_dir(subdir_path, contents, all_diff_contents=all_diff_contents)
+import helpers.dir_schemas
 
 
 @pytest.mark.dir_ctor
@@ -90,33 +64,7 @@ def test_dir_with_files_and_subdir(tmpdir):
 def test_dir_with_multiple_subdir_levels(tmpdir):
     # GIVEN
     temp_path = str(tmpdir)
-    expected = {
-        "dirname": os.path.basename(temp_path),
-        "fullpath": temp_path,
-        "files": {"one"},
-        "subdirs": [{
-            "dirname": "sublevel1",
-            "fullpath": os.path.join(temp_path, "sublevel1"),
-            "files": {"file1.txt", "file2.tsk"},
-            "subdirs": [{
-                "dirname": "sublevel2",
-                "fullpath": os.path.join(temp_path, "sublevel1", "sublevel2"),
-                "files": {"ugh.js", "ayy.css", "nope.html"},
-                "subdirs": [{
-                    "dirname": "Secret Pictures",
-                    "fullpath": os.path.join(temp_path, "sublevel1", "sublevel2", "Secret Pictures"),
-                    "files": {"SECRET.png"},
-                    "subdirs": []
-                }]
-            },
-                {
-                "dirname": "Pictures",
-                "fullpath": os.path.join(temp_path, "sublevel1", "Pictures"),
-                "files": {"img1.jpg", "img2.jpg", "vid1.mp4"},
-                "subdirs": []
-            }]
-        }]
-    }
+    expected = helpers.dir_schemas.multiple_subdir_levels(str(tmpdir))
     create_dir(temp_path, expected)
 
     # WHEN
@@ -128,42 +76,34 @@ def test_dir_with_multiple_subdir_levels(tmpdir):
 
 @pytest.fixture(scope="function")
 def diff_fix(tmpdir_factory):
-    left_path = tmpdir_factory.mktemp("left_dir")
-    right_path = tmpdir_factory.mktemp("right_dir")
+    src_path = tmpdir_factory.mktemp("src_dir")
+    cmp_path = tmpdir_factory.mktemp("cmp_dir")
 
-    left_dir = Dir("left_dir", str(left_path), set(), [])
-    right_dir = Dir("right_dir", str(right_path), set(), [])
+    src_dir = Dir("src_dir", str(src_path), set(), [])
+    cmp_dir = Dir("cmp_dir", str(cmp_path), set(), [])
 
-    yield (left_dir, right_dir)
+    yield (src_dir, cmp_dir)
 
 
 def validate_diffs(left_dir: Dir,
                    right_dir: Dir,
-                   expected_diff: DiffResult) -> DiffResult:
-    actual_file_cmp = sut.compare_files(left_dir, right_dir)
-    actual_subdir_cmp = sut.compare_subdirs(left_dir, right_dir)
+                   expected_diff: DirDiff) -> DirDiff:
 
-    actual_diff = DiffResult(
-        left_files=actual_file_cmp[0],
-        right_files=actual_file_cmp[1],
-        common_files=actual_file_cmp[2],
-        left_subdirs=actual_subdir_cmp[0],
-        right_subdirs=actual_subdir_cmp[1],
-        common_subdirs=actual_subdir_cmp[2]  # type: ignore
+    actual_diff = DirDiff(
+        files=sut.compare_files(left_dir, right_dir),
+        subdirs=sut.compare_subdirs(left_dir, right_dir)
     )
 
-    assert expected_diff.left_files == actual_diff.left_files
-    assert expected_diff.right_files == actual_diff.right_files
-    assert expected_diff.common_files == actual_diff.common_files
+    assert expected_diff.files == actual_diff.files
 
-    assert expected_diff.left_subdirs == actual_diff.left_subdirs
-    assert expected_diff.right_subdirs == actual_diff.right_subdirs
-    assert expected_diff.common_subdirs.keys() == actual_diff.common_subdirs.keys()
+    assert expected_diff.subdirs.missing == actual_diff.subdirs.missing
+    assert expected_diff.subdirs.new == actual_diff.subdirs.new
+    assert expected_diff.subdirs.shared.keys() == actual_diff.subdirs.shared.keys()
 
     return actual_diff
 
 
-@pytest.mark.parametrize("left_files, right_files, left_subdirs, right_subdirs", [
+@pytest.mark.parametrize("src_files, cmp_files, src_subdirs, cmp_subdirs", [
     (["f.txt", "g.txt"], [], [], []),
     ([], ["f.txt", "g.txt"], [], []),
     (["a.tsk", "b.cpp"], ["f.png", "g.md"], [], []),
@@ -174,103 +114,97 @@ def validate_diffs(left_dir: Dir,
      "subdir_a", "subdir_b"], ["subdir_c", "subdir_d"])
 ])
 def test_diff_shallow_with_no_common_items(diff_fix,
-                                           left_files,
-                                           right_files,
-                                           left_subdirs,
-                                           right_subdirs) -> None:
-    left_dir, right_dir = diff_fix
+                                           src_files,
+                                           cmp_files,
+                                           src_subdirs,
+                                           cmp_subdirs) -> None:
+    src_dir, cmp_dir = diff_fix
 
-    left_dir.files = set(left_files)
-    right_dir.files = set(right_files)
+    src_dir.files = set(src_files)
+    cmp_dir.files = set(cmp_files)
 
-    left_dir.subdirs = [
-        Dir(d, os.path.join(left_dir.fullpath, d), set(), []) for d in left_subdirs]
-    right_dir.subdirs = [
-        Dir(d, os.path.join(right_dir.fullpath, d), set(), []) for d in right_subdirs]
+    src_dir.subdirs = [
+        Dir(d, os.path.join(src_dir.fullpath, d), set(), []) for d in src_subdirs]
+    cmp_dir.subdirs = [
+        Dir(d, os.path.join(cmp_dir.fullpath, d), set(), []) for d in cmp_subdirs]
 
-    create_dir(left_dir.fullpath, left_dir.asdict())
-    create_dir(right_dir.fullpath, right_dir.asdict())
+    create_dir(src_dir.fullpath, src_dir.asdict())
+    create_dir(cmp_dir.fullpath, cmp_dir.asdict())
 
-    expected_diff = DiffResult()
-    expected_diff.left_files = set(left_files)
-    expected_diff.right_files = set(right_files)
-    expected_diff.left_subdirs = set(left_subdirs)
-    expected_diff.right_subdirs = set(right_subdirs)
+    expected_diff = DirDiff()
+    expected_diff.files = FilesDiff(missing=set(src_files), new=set(cmp_files))
+    expected_diff.subdirs = SubdirDiff(missing=set(src_subdirs), new=set(cmp_subdirs))
 
-    validate_diffs(left_dir, right_dir, expected_diff)
+    validate_diffs(src_dir, cmp_dir, expected_diff)
 
 
-@pytest.mark.parametrize("all_diff_contents, matching_groups", [
-    (True, ["left_files", "right_files"]),
-    (False, ["common_files"])
+@pytest.mark.parametrize("all_diff_contents, matching_group", [
+    (True, "changed"),
+    (False, "shared")
 ])
-def test_diff_only_files(diff_fix, all_diff_contents, matching_groups):
+def test_diff_only_files(diff_fix, all_diff_contents, matching_group):
     common_files = set(["common.py", "common.txt", "common.mp4"])
 
-    left_dir, right_dir = diff_fix
-    left_dir.files = common_files
-    right_dir.files = common_files
+    src_dir, cmp_dir = diff_fix
+    src_dir.files = common_files
+    cmp_dir.files = common_files
 
-    create_dir(left_dir.fullpath, left_dir.asdict(),
+    create_dir(src_dir.fullpath, src_dir.asdict(),
                all_diff_contents=all_diff_contents)
-    create_dir(right_dir.fullpath, right_dir.asdict(),
+    create_dir(cmp_dir.fullpath, cmp_dir.asdict(),
                all_diff_contents=all_diff_contents)
 
-    expected_matches = {
-        group: common_files
-        for group in matching_groups
-    }
-    expected_diff = DiffResult(**expected_matches)
+    expected_match = {}
+    expected_match[matching_group] = common_files
+    expected_diff = DirDiff(files=FilesDiff(**expected_match))
 
-    validate_diffs(left_dir, right_dir, expected_diff)
+    validate_diffs(src_dir, cmp_dir, expected_diff)
 
 
-@pytest.mark.parametrize("all_diff_contents, matching_groups", [
-    (True, ["left_files", "right_files"]),
-    (False, ["common_files"])
+@pytest.mark.parametrize("all_diff_contents, matching_group", [
+    (True, "changed"),
+    (False, "shared")
 ])
-def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_groups):
+def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_group):
     subdir_contents = {
-        sub_name: set(f"{sub_name}.file{suffix}" for suffix in [
-                      ".mp4", ".jpg", ".py"])
+        sub_name: set(f"{sub_name}.file{suffix}" for suffix in [".mp4", ".jpg", ".py"])
         for sub_name in ["subdir_a", "subdir-b", "SUBDIR.C"]
     }
 
-    left_dir, right_dir = diff_fix
-    left_dir.subdirs = [
-        Dir(d, os.path.join(left_dir.fullpath, d), files, [])
+    src_dir, cmp_dir = diff_fix
+    src_dir.subdirs = [
+        Dir(d, os.path.join(src_dir.fullpath, d), files, [])
         for d, files in subdir_contents.items()
     ]
-    right_dir.subdirs = [
-        Dir(d, os.path.join(right_dir.fullpath, d), files, [])
+    cmp_dir.subdirs = [
+        Dir(d, os.path.join(cmp_dir.fullpath, d), files, [])
         for d, files in subdir_contents.items()
     ]
 
-    create_dir(left_dir.fullpath, left_dir.asdict(),
+    create_dir(src_dir.fullpath, src_dir.asdict(),
                all_diff_contents=all_diff_contents)
-    create_dir(right_dir.fullpath, right_dir.asdict(),
+    create_dir(cmp_dir.fullpath, cmp_dir.asdict(),
                all_diff_contents=all_diff_contents)
 
+    # TODO: Make this less brittle
     # Diff only cares about keys for common subdirs, so we can ignore the values
-    expected_diff = DiffResult(common_subdirs=subdir_contents)
-    actual_diff = validate_diffs(left_dir, right_dir, expected_diff)
+    expected_diff = DirDiff(subdirs=SubdirDiff(shared=subdir_contents))
+    actual_diff = validate_diffs(src_dir, cmp_dir, expected_diff)
 
-    for d, contents in actual_diff.common_subdirs.items():
-        expected_matches = {
-            group: subdir_contents[d]
-            for group in matching_groups
-        }
-        expected_diff = DiffResult(**expected_matches)
+    for d, contents in actual_diff.subdirs.shared.items():
+        expected_match = {}
+        expected_match[matching_group] = subdir_contents[d]
+        expected_diff = DirDiff(files=FilesDiff(**expected_match))
 
         validate_diffs(contents[0], contents[1], expected_diff)
 
 
-@pytest.mark.parametrize("all_diff_contents, matching_groups", [
-    (True, ["left_files", "right_files"]),
-    (False, ["common_files"])
+@pytest.mark.parametrize("all_diff_contents, matching_group", [
+    (True, "changed"),
+    (False, "shared")
 ])
-def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_groups):
-    left_dir, right_dir = diff_fix
+def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_group):
+    src_dir, cmp_dir = diff_fix
     common_files = set(["woah.jpg", "mad.png", "deep.arw"])
 
     # Nest 3 levels deep
@@ -288,29 +222,51 @@ def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_groups):
         # At the deepest level
         dir_ptr.files = common_files
 
-    init_nested_subdirs(left_dir)
-    init_nested_subdirs(right_dir)
+    init_nested_subdirs(src_dir)
+    init_nested_subdirs(cmp_dir)
 
-    create_dir(left_dir.fullpath, left_dir.asdict(),
+    create_dir(src_dir.fullpath, src_dir.asdict(),
                all_diff_contents=all_diff_contents)
-    create_dir(right_dir.fullpath, right_dir.asdict(),
+    create_dir(cmp_dir.fullpath, cmp_dir.asdict(),
                all_diff_contents=all_diff_contents)
 
-    def validate_nest(left_dir: Dir, right_dir: Dir):
-        if left_dir.subdirs and right_dir.subdirs:
+    def validate_nest(src_dir: Dir, cmp_dir: Dir):
+        if src_dir.subdirs and cmp_dir.subdirs:
             # Still making our way downtown
-            common_subdirs = {d.dirname: d for d in left_dir.subdirs}
-            expected_diff = DiffResult(common_subdirs=common_subdirs)
-            validate_diffs(left_dir, right_dir, expected_diff)
+            # TODO: This also uses the assumption that validation only uses keys
+            #       Find a way to make this less brittle
+            common_subdirs = {d.dirname: d for d in src_dir.subdirs}
+            expected_diff = DirDiff(subdirs=SubdirDiff(shared=common_subdirs))
+            validate_diffs(src_dir, cmp_dir, expected_diff)
 
+            # This should only be a single linked list of directories
+            # Otherwise we're outside of the boundaries
             assert len(common_subdirs.keys()) == 1
-            validate_nest(left_dir.subdirs[0], right_dir.subdirs[0])
+            validate_nest(src_dir.subdirs[0], cmp_dir.subdirs[0])
         else:
             # Now we're in downtown
-            expected_matches = {
-                group: common_files
-                for group in matching_groups
-            }
-            expected_diff = DiffResult(**expected_matches)
+            expected_match = {}
+            expected_match[matching_group] = common_files
+            expected_diff = DirDiff(files=FilesDiff(**expected_match))
 
-    validate_nest(left_dir, right_dir)
+
+    validate_nest(src_dir, cmp_dir)
+
+
+# # def test_full_diff_dirs(diff_fix):
+# #     # GIVEN
+# #     src_dir, cmp_dir = diff_fix
+# #     src_dir_pattern = helpers.dir_schemas.multiple_subdir_levels(src_dir.fullpath)
+# #     cmp_dir_pattern = helpers.dir_schemas.multiple_subdir_levels(cmp_dir.fullpath)
+
+# #     create_dir(src_dir.fullpath, src_dir_pattern, all_diff_contents=True, seed="SRC")
+# #     create_dir(cmp_dir.fullpath, cmp_dir_pattern, all_diff_contents=True, seed="CMP")
+
+# #     # WHEN
+# #     src_dir = loaded_dir(src_dir.fullpath)
+# #     cmp_dir = loaded_dir(src_dir.fullpath)
+
+# #     diff = sut.full_diff_dirs(src_dir, cmp_dir)
+
+# #     # THEN
+# #     assert not diff
