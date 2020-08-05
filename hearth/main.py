@@ -1,16 +1,16 @@
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from os import curdir, path
 
 import click
-import filecmp
 import logging
 import psutil  # type: ignore
 import pprint
 import shutil
 import sys
 
-from hearth import sync_central
+from hearth import dirdiff, sync_central
 
 pp: pprint.PrettyPrinter = pprint.PrettyPrinter(indent=4)
 DEFAULT_SAVE_FILENAME = ".hearth-central.toml"
@@ -34,8 +34,11 @@ def root():
 @click.argument("src")
 @click.argument("target")
 def compare_cmd(src, target):
-    res = filecmp.dircmp(src, target)
-    res.report_full_closure()
+    src_dir = dirdiff.loaded_dir(src)
+    target_dir = dirdiff.loaded_dir(target)
+    res = dirdiff.compare_dirs(src_dir, target_dir)
+
+    pp.pprint(asdict(res))
 
 
 @click.command(
@@ -116,32 +119,32 @@ def list_cmd():
 @click.argument("backup")
 @click.option("--no-commit", is_flag=True, help="Do not commit sync")
 def sync_cmd(master, backup, no_commit):
+    print("Not implemented yet!")
+    # def flatten_left_only(dc, prefix):
+    #     lefts = [path.join(prefix, l) for l in dc.left_only]
 
-    def flatten_left_only(dc, prefix):
-        lefts = [path.join(prefix, l) for l in dc.left_only]
+    #     if dc.subdirs:
+    #         return lefts + [e for d, l in dc.subdirs.items() for e in flatten_left_only(l, d)]
+    #     else:
+    #         return lefts
 
-        if dc.subdirs:
-            return lefts + [e for d, l in dc.subdirs.items() for e in flatten_left_only(l, d)]
-        else:
-            return lefts
+    # res = flatten_left_only(filecmp.dircmp(master, backup), "")
 
-    res = flatten_left_only(filecmp.dircmp(master, backup), "")
+    # if no_commit:
+    #     print(
+    #         f"Syncing the following data from {master} to {backup}: {pp.pformat(res)}")
+    # else:
+    #     print(f"Syncing {master} contents to {backup}...")
+    #     for e in res:
+    #         master_copy = path.join(master, e)
+    #         backup_copy = path.join(backup, e)
 
-    if no_commit:
-        print(
-            f"Syncing the following data from {master} to {backup}: {pp.pformat(res)}")
-    else:
-        print(f"Syncing {master} contents to {backup}...")
-        for e in res:
-            master_copy = path.join(master, e)
-            backup_copy = path.join(backup, e)
-
-            if path.isfile(master_copy):
-                shutil.copy(master_copy, backup_copy)
-                print(f"File {master_copy} >>>> {backup_copy}")
-            else:
-                shutil.copytree(master_copy, backup_copy)
-                print(f"Directory {master_copy} >>>> {backup_copy}")
+    #         if path.isfile(master_copy):
+    #             shutil.copy(master_copy, backup_copy)
+    #             print(f"File {master_copy} >>>> {backup_copy}")
+    #         else:
+    #             shutil.copytree(master_copy, backup_copy)
+    #             print(f"Directory {master_copy} >>>> {backup_copy}")
 
 
 def main():

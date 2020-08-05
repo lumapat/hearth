@@ -145,8 +145,8 @@ def compare_dirs(src_dir: Dir,
 
 
 def _diff_walk(src_dir: Dir,
-              cmp_dir: Dir,
-              full_paths: bool = False) -> Generator[DirDiff, None, None]:
+               cmp_dir: Dir,
+               full_paths: bool = False) -> Generator[DirDiff, None, None]:
     dir_diff = compare_dirs(src_dir, cmp_dir)
     subdirs = copy(dir_diff.subdirs.shared)
 
