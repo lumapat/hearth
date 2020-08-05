@@ -88,11 +88,7 @@ def diff_fix(tmpdir_factory):
 def validate_diffs(left_dir: Dir,
                    right_dir: Dir,
                    expected_diff: DirDiff) -> DirDiff:
-
-    actual_diff = DirDiff(
-        files=sut.compare_files(left_dir, right_dir),
-        subdirs=sut.compare_subdirs(left_dir, right_dir)
-    )
+    actual_diff = sut.compare_dirs(left_dir, right_dir)
 
     assert expected_diff.files == actual_diff.files
 
@@ -249,24 +245,30 @@ def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_group):
             expected_match[matching_group] = common_files
             expected_diff = DirDiff(files=FilesDiff(**expected_match))
 
-
     validate_nest(src_dir, cmp_dir)
 
 
-# # def test_full_diff_dirs(diff_fix):
-# #     # GIVEN
-# #     src_dir, cmp_dir = diff_fix
-# #     src_dir_pattern = helpers.dir_schemas.multiple_subdir_levels(src_dir.fullpath)
-# #     cmp_dir_pattern = helpers.dir_schemas.multiple_subdir_levels(cmp_dir.fullpath)
+def test_full_diff_dirs(diff_fix):
+    # GIVEN
+    src_dir, cmp_dir = diff_fix
+    src_dir_pattern = helpers.dir_schemas.multiple_subdir_levels(src_dir.fullpath)
+    cmp_dir_pattern = helpers.dir_schemas.multiple_subdir_levels(cmp_dir.fullpath)
 
-# #     create_dir(src_dir.fullpath, src_dir_pattern, all_diff_contents=True, seed="SRC")
-# #     create_dir(cmp_dir.fullpath, cmp_dir_pattern, all_diff_contents=True, seed="CMP")
+    create_dir(src_dir.fullpath, src_dir_pattern, all_diff_contents=True, seed="SRC")
+    create_dir(cmp_dir.fullpath, cmp_dir_pattern, all_diff_contents=True, seed="CMP")
 
-# #     # WHEN
-# #     src_dir = loaded_dir(src_dir.fullpath)
-# #     cmp_dir = loaded_dir(src_dir.fullpath)
+    # WHEN
+    src_dir = loaded_dir(src_dir.fullpath)
+    cmp_dir = loaded_dir(cmp_dir.fullpath)
 
-# #     diff = sut.full_diff_dirs(src_dir, cmp_dir)
+    diff = sut.full_diff_dirs(src_dir, cmp_dir)
 
-# #     # THEN
-# #     assert not diff
+    # THEN
+    assert diff.files.changed
+    assert not diff.files.missing
+    assert not diff.files.new
+    assert not diff.files.shared
+
+    assert not diff.subdirs.missing
+    assert not diff.subdirs.new
+    assert diff.subdirs.shared
