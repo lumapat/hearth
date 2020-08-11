@@ -19,8 +19,8 @@ def create_dir(path: str,
         else:
             fp.touch()
 
-    for contents in dir_dict["subdirs"]:
-        subdir_path = Path(path) / contents["dirname"]
+    for dirname, contents in dir_dict["subdirs"].items():
+        subdir_path = Path(path) / dirname
         subdir_path.mkdir()
 
         create_dir(subdir_path,
@@ -36,28 +36,34 @@ def multiple_subdir_levels(path: str):
         "dirname": p.name,
         "fullpath": fspath(p),
         "files": {"one"},
-        "subdirs": [{
-            "dirname": "sublevel1",
-            "fullpath": fspath(p/"sublevel1"),
-            "files": {"file1.txt", "file2.tsk"},
-            "subdirs": [{
-                "dirname": "sublevel2",
-                "fullpath": fspath(p/"sublevel1"/"sublevel2"),
-                "files": {"ugh.js", "ayy.css", "nope.html"},
-                "subdirs": [{
-                    "dirname": "Secret Pictures",
-                    "fullpath": fspath(p/"sublevel1"/"sublevel2"/"Secret Pictures"),
-                    "files": {"SECRET.png"},
-                    "subdirs": []
-                }]
-            },
-                {
-                "dirname": "Pictures",
-                "fullpath": fspath(p/"sublevel1"/"Pictures"),
-                "files": {"img1.jpg", "img2.jpg", "vid1.mp4"},
-                "subdirs": []
-            }]
-        }]
+        "subdirs": {
+            "sublevel1": {
+                "dirname": "sublevel1",
+                "fullpath": fspath(p/"sublevel1"),
+                "files": {"file1.txt", "file2.tsk"},
+                "subdirs": {
+                    "sublevel2": {
+                        "dirname": "sublevel2",
+                        "fullpath": fspath(p/"sublevel1"/"sublevel2"),
+                        "files": {"ugh.js", "ayy.css", "nope.html"},
+                        "subdirs": {
+                            "Secret Pictures": {
+                                "dirname": "Secret Pictures",
+                                "fullpath": fspath(p/"sublevel1"/"sublevel2"/"Secret Pictures"),
+                                "files": {"SECRET.png"},
+                                "subdirs": {}
+                            }
+                        }
+                    },
+                    "Pictures": {
+                        "dirname": "Pictures",
+                        "fullpath": fspath(p/"sublevel1"/"Pictures"),
+                        "files": {"img1.jpg", "img2.jpg", "vid1.mp4"},
+                        "subdirs": {}
+                    }
+                }
+            }
+        }
     }
 
     return pattern

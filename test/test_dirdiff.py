@@ -25,7 +25,7 @@ def test_dir_with_only_files(tmpdir):
         "dirname": os.path.basename(temp_path),
         "fullpath": temp_path,
         "files": {"one", "two", "three"},
-        "subdirs": []
+        "subdirs": {}
     }
     create_dir(temp_path, expected)
 
@@ -44,12 +44,14 @@ def test_dir_with_files_and_subdir(tmpdir):
         "dirname": os.path.basename(temp_path),
         "fullpath": temp_path,
         "files": {"one", "two", "three"},
-        "subdirs": [{
-            "dirname": "sublevel1",
-            "fullpath": os.path.join(temp_path, "sublevel1"),
-            "files": {"file1.txt", "file2.tsk", "file3.js"},
-            "subdirs": []
-        }]
+        "subdirs": {
+            "sublevel1": {
+                "dirname": "sublevel1",
+                "fullpath": os.path.join(temp_path, "sublevel1"),
+                "files": {"file1.txt", "file2.tsk", "file3.js"},
+                "subdirs": {}
+            }
+        }
     }
     create_dir(temp_path, expected)
 
@@ -79,8 +81,8 @@ def diff_fix(tmpdir_factory):
     src_path = tmpdir_factory.mktemp("src_dir")
     cmp_path = tmpdir_factory.mktemp("cmp_dir")
 
-    src_dir = Dir("src_dir", str(src_path), set(), [])
-    cmp_dir = Dir("cmp_dir", str(cmp_path), set(), [])
+    src_dir = Dir("src_dir", str(src_path))
+    cmp_dir = Dir("cmp_dir", str(cmp_path))
 
     yield (src_dir, cmp_dir)
 
@@ -90,12 +92,7 @@ def validate_diffs(left_dir: Dir,
                    expected_diff: DirDiff) -> DirDiff:
     actual_diff = sut.compare_dirs(left_dir, right_dir)
 
-    assert expected_diff.files == actual_diff.files
-
-    assert expected_diff.subdirs.missing == actual_diff.subdirs.missing
-    assert expected_diff.subdirs.new == actual_diff.subdirs.new
-    assert expected_diff.subdirs.shared.keys() == actual_diff.subdirs.shared.keys()
-
+    assert expected_diff == actual_diff
     return actual_diff
 
 
@@ -119,10 +116,10 @@ def test_diff_shallow_with_no_common_items(diff_fix,
     src_dir.files = set(src_files)
     cmp_dir.files = set(cmp_files)
 
-    src_dir.subdirs = [
-        Dir(d, os.path.join(src_dir.fullpath, d), set(), []) for d in src_subdirs]
-    cmp_dir.subdirs = [
-        Dir(d, os.path.join(cmp_dir.fullpath, d), set(), []) for d in cmp_subdirs]
+    src_dir.subdirs = {
+        d: Dir(d, os.path.join(src_dir.fullpath, d)) for d in src_subdirs}
+    cmp_dir.subdirs = {
+        d: Dir(d, os.path.join(cmp_dir.fullpath, d)) for d in cmp_subdirs}
 
     create_dir(src_dir.fullpath, src_dir.asdict())
     create_dir(cmp_dir.fullpath, cmp_dir.asdict())
@@ -168,14 +165,14 @@ def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_group):
     }
 
     src_dir, cmp_dir = diff_fix
-    src_dir.subdirs = [
-        Dir(d, os.path.join(src_dir.fullpath, d), files, [])
+    src_dir.subdirs = {
+        d: Dir(d, os.path.join(src_dir.fullpath, d), files=files)
         for d, files in subdir_contents.items()
-    ]
-    cmp_dir.subdirs = [
-        Dir(d, os.path.join(cmp_dir.fullpath, d), files, [])
+    }
+    cmp_dir.subdirs = {
+        d: Dir(d, os.path.join(cmp_dir.fullpath, d), files=files)
         for d, files in subdir_contents.items()
-    ]
+    }
 
     create_dir(src_dir.fullpath, src_dir.asdict(),
                all_diff_contents=all_diff_contents)
@@ -184,15 +181,15 @@ def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_group):
 
     # TODO: Make this less brittle
     # Diff only cares about keys for common subdirs, so we can ignore the values
-    expected_diff = DirDiff(subdirs=SubdirDiff(shared=subdir_contents))
+    expected_diff = DirDiff(subdirs=SubdirDiff(shared=set(subdir_contents.keys())))
     actual_diff = validate_diffs(src_dir, cmp_dir, expected_diff)
 
-    for d, contents in actual_diff.subdirs.shared.items():
+    for d in actual_diff.subdirs.shared:
         expected_match = {}
         expected_match[matching_group] = subdir_contents[d]
         expected_diff = DirDiff(files=FilesDiff(**expected_match))
 
-        validate_diffs(contents[0], contents[1], expected_diff)
+        validate_diffs(src_dir.subdirs[d], cmp_dir.subdirs[d], expected_diff)
 
 
 @pytest.mark.parametrize("all_diff_contents, matching_group", [
@@ -207,13 +204,13 @@ def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_group):
     def init_nested_subdirs(dir_ptr):
         for i in range(1, 4):
             subdir_name = f"subdir{i}"
-            dir_ptr.subdirs = [Dir(
-                subdir_name,
-                os.path.join(dir_ptr.fullpath, subdir_name),
-                set(),
-                []
-            )]
-            dir_ptr = dir_ptr.subdirs[0]
+            dir_ptr.subdirs = {
+                subdir_name: Dir(
+                    subdir_name,
+                    os.path.join(dir_ptr.fullpath, subdir_name)
+                )
+            }
+            dir_ptr = dir_ptr.subdirs[subdir_name]
 
         # At the deepest level
         dir_ptr.files = common_files
@@ -231,14 +228,15 @@ def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_group):
             # Still making our way downtown
             # TODO: This also uses the assumption that validation only uses keys
             #       Find a way to make this less brittle
-            common_subdirs = {d.dirname: d for d in src_dir.subdirs}
-            expected_diff = DirDiff(subdirs=SubdirDiff(shared=common_subdirs))
+            common_subdir_names = set(src_dir.subdirs.keys())
+            expected_diff = DirDiff(subdirs=SubdirDiff(shared=common_subdir_names))
             validate_diffs(src_dir, cmp_dir, expected_diff)
 
             # This should only be a single linked list of directories
             # Otherwise we're outside of the boundaries
-            assert len(common_subdirs.keys()) == 1
-            validate_nest(src_dir.subdirs[0], cmp_dir.subdirs[0])
+            assert len(common_subdir_names) == 1
+            subdir_name = list(common_subdir_names)[0]
+            validate_nest(src_dir.subdirs[subdir_name], cmp_dir.subdirs[subdir_name])
         else:
             # Now we're in downtown
             expected_match = {}

@@ -6,7 +6,15 @@ from filecmp import cmpfiles
 from functools import reduce, total_ordering
 from os import listdir
 from os.path import basename, isdir, isfile, join as ojoin
-from typing import Dict, Generator, List, Set, Tuple
+from pathlib import Path
+from typing import (
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Set,
+    Tuple
+)
 import operator
 
 
@@ -15,8 +23,8 @@ import operator
 class Dir:
     dirname: str
     fullpath: str
-    files: Set[str]
-    subdirs: List[Dir]
+    files: Set[str] = field(default_factory=set)
+    subdirs: Dict[str, Dir] = field(default_factory=dict)
 
     def __eq__(self, other):
         return self.dirname.__eq__(other.dirname)
@@ -56,12 +64,12 @@ class FilesDiff:
 class SubdirDiff:
     missing: Set[str] = field(default_factory=set)
     new: Set[str] = field(default_factory=set)
-    shared: Dict[str, Tuple[Dir, Dir]] = field(default_factory=dict)
+    shared: Set[str] = field(default_factory=set)
 
     def __or__(self, other):
         self.missing |= other.missing
         self.new |= other.new
-        self.shared.update(other.shared)
+        self.shared |= other.shared
 
         return self
 
@@ -92,14 +100,23 @@ class DirDiff:
 def loaded_dir(path: str) -> Dir:
     entries = listdir(path=path)
 
-    return Dir(basename(path),
-               path,
-               {f for f in entries if isfile(ojoin(path, f))},
-               [loaded_dir(ojoin(path, d)) for d in entries if isdir(ojoin(path, d))])
+    subdirs = {d: loaded_dir(ojoin(path, d)) for d in entries if isdir(ojoin(path, d))}
+    files =  {f for f in entries if isfile(ojoin(path, f))}
+
+    return Dir(basename(path), path, files=files, subdirs=subdirs)
+
+
+def _prepend_path(paths: Iterable[str],
+                  path: str) -> Set[str]:
+    if path:
+        return set(ojoin(path, p) for p in paths)
+    else:
+        return set(paths)
 
 
 def _compare_files(src_dir: Dir,
-                   cmp_dir: Dir) -> FilesDiff:
+                   cmp_dir: Dir,
+                   prefix_path: str = "") -> FilesDiff:
     # TODO: Do something with error!!
     files_in_both = src_dir.files & cmp_dir.files
     matches, mismatches, _ = cmpfiles(src_dir.fullpath,
@@ -108,52 +125,52 @@ def _compare_files(src_dir: Dir,
                                       shallow=False)
 
     return FilesDiff(
-        changed=set(mismatches),
-        missing=(src_dir.files - files_in_both),
-        new=(cmp_dir.files - files_in_both),
-        shared=set(matches)
+        changed=_prepend_path(mismatches, prefix_path),
+        missing=_prepend_path(src_dir.files - files_in_both, prefix_path),
+        new=_prepend_path(cmp_dir.files - files_in_both, prefix_path),
+        shared=_prepend_path(matches, prefix_path)
     )
 
 
 def _compare_subdirs(src_dir: Dir,
-                     cmp_dir: Dir) -> SubdirDiff:
+                     cmp_dir: Dir,
+                     prefix_path: str = "") -> SubdirDiff:
     """ TODO: Docs """
 
-    src_subdirs = {d.dirname: d for d in src_dir.subdirs}
-    cmp_subdirs = {d.dirname: d for d in cmp_dir.subdirs}
-
-    common_dir_names = src_subdirs.keys() & cmp_subdirs.keys()
-
-    src_only_subdirs = set(src_subdirs.keys() - cmp_subdirs.keys())
-    cmp_only_subdirs = set(cmp_subdirs.keys() - src_subdirs.keys())
-    common_subdirs = {d: (src_subdirs[d], cmp_subdirs[d])
-                      for d in common_dir_names}
+    src_subdirs = set(src_dir.subdirs.keys())
+    cmp_subdirs = set(cmp_dir.subdirs.keys())
 
     return SubdirDiff(
-        missing=src_only_subdirs,
-        new=cmp_only_subdirs,
-        shared=common_subdirs
+        missing=_prepend_path(src_subdirs - cmp_subdirs, prefix_path),
+        new=_prepend_path(cmp_subdirs - src_subdirs, prefix_path),
+        shared=_prepend_path(src_subdirs & cmp_subdirs, prefix_path)
     )
 
 
 def compare_dirs(src_dir: Dir,
-                 cmp_dir: Dir) -> DirDiff:
+                 cmp_dir: Dir,
+                 prefix_path: str = "") -> DirDiff:
     return DirDiff(
-        files=_compare_files(src_dir, cmp_dir),
-        subdirs=_compare_subdirs(src_dir, cmp_dir)
+        files=_compare_files(src_dir, cmp_dir, prefix_path=prefix_path),
+        subdirs=_compare_subdirs(src_dir, cmp_dir, prefix_path=prefix_path)
     )
 
 
 def _diff_walk(src_dir: Dir,
                cmp_dir: Dir,
+               relative_path: str = "",
                full_paths: bool = False) -> Generator[DirDiff, None, None]:
-    dir_diff = compare_dirs(src_dir, cmp_dir)
+    dir_diff = compare_dirs(src_dir, cmp_dir, prefix_path=relative_path)
     subdirs = copy(dir_diff.subdirs.shared)
 
     yield dir_diff
 
-    for left_subdir, right_subdir in subdirs.values():
-        yield from _diff_walk(left_subdir, right_subdir)
+    for subdir in subdirs:
+        base_subdir = basename(subdir)
+        yield from _diff_walk(src_dir.subdirs[base_subdir],
+                              cmp_dir.subdirs[base_subdir],
+                              relative_path=subdir,
+                              full_paths=full_paths)
 
 
 def full_diff_dirs(src_dir: Dir,
