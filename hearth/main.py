@@ -36,7 +36,7 @@ def root():
 def compare_cmd(src, target):
     src_dir = dirdiff.loaded_dir(src)
     target_dir = dirdiff.loaded_dir(target)
-    res = dirdiff.compare_dirs(src_dir, target_dir)
+    res = dirdiff.full_diff_dirs(src_dir, target_dir)
 
     pp.pprint(asdict(res))
 

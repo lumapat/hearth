@@ -269,4 +269,4 @@ def test_full_diff_dirs(diff_fix):
 
     assert not diff.subdirs.missing
     assert not diff.subdirs.new
-    assert diff.subdirs.shared
+    assert not diff.subdirs.shared

@@ -15,8 +15,10 @@ from typing import (
     Set,
     Tuple
 )
+import logging
 import operator
 
+logger = logging.getLogger(__name__)
 
 @total_ordering
 @dataclass(eq=False, order=False)
@@ -43,7 +45,7 @@ class FilesDiff:
     new: Set[str] = field(default_factory=set)
     shared: Set[str] = field(default_factory=set)
 
-    def __or__(self, other):
+    def __or__(self, other) -> FilesDiff:
         self.changed |= other.changed
         self.missing |= other.missing
         self.new |= other.new
@@ -51,12 +53,11 @@ class FilesDiff:
 
         return self
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return any([
             self.changed,
             self.missing,
-            self.new,
-            self.shared
+            self.new
         ])
 
 
@@ -66,18 +67,17 @@ class SubdirDiff:
     new: Set[str] = field(default_factory=set)
     shared: Set[str] = field(default_factory=set)
 
-    def __or__(self, other):
+    def __or__(self, other) -> SubdirDiff:
         self.missing |= other.missing
         self.new |= other.new
         self.shared |= other.shared
 
         return self
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return any([
             self.missing,
-            self.new,
-            self.shared
+            self.new
         ])
 
 
@@ -86,14 +86,14 @@ class DirDiff:
     files: FilesDiff = FilesDiff()
     subdirs: SubdirDiff = SubdirDiff()
 
-    def __or__(self, other):
+    def __or__(self, other) -> DirDiff:
         self.files |= other.files
         self.subdirs |= other.subdirs
 
         return self
 
-    def __bool__(self):
-        return self.files or self.subdirs
+    def __bool__(self) -> bool:
+        return any([self.files, self.subdirs])
 
 
 # TODO: Docs
@@ -159,25 +159,31 @@ def compare_dirs(src_dir: Dir,
 def _diff_walk(src_dir: Dir,
                cmp_dir: Dir,
                relative_path: str = "",
-               full_paths: bool = False) -> Generator[DirDiff, None, None]:
+               full_paths: bool = False) -> DirDiff:
     dir_diff = compare_dirs(src_dir, cmp_dir, prefix_path=relative_path)
-    subdirs = copy(dir_diff.subdirs.shared)
 
-    yield dir_diff
+    subdirs = copy(dir_diff.subdirs.shared)
+    dir_diff.subdirs.shared.clear()
 
     for subdir in subdirs:
         base_subdir = basename(subdir)
-        yield from _diff_walk(src_dir.subdirs[base_subdir],
-                              cmp_dir.subdirs[base_subdir],
-                              relative_path=subdir,
-                              full_paths=full_paths)
+        subdir_diff = _diff_walk(src_dir.subdirs[base_subdir],
+                                 cmp_dir.subdirs[base_subdir],
+                                 relative_path=subdir,
+                                 full_paths=full_paths)
+
+        if subdir_diff:
+            dir_diff |= subdir_diff
+        else:
+            dir_diff.subdirs.shared.add(subdir)
+
+    return dir_diff
 
 
 def full_diff_dirs(src_dir: Dir,
                    cmp_dir: Dir,
                    full_paths: bool = False) -> DirDiff:
 
-    return reduce(operator.or_,
-                  _diff_walk(src_dir,
-                             cmp_dir,
-                             full_paths=full_paths))
+    return _diff_walk(src_dir,
+                      cmp_dir,
+                      full_paths=full_paths)
