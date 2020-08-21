@@ -1,7 +1,7 @@
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from os import curdir, path
+from os import curdir, path, fspath
 
 import click
 import logging
@@ -119,32 +119,40 @@ def list_cmd():
 @click.argument("backup")
 @click.option("--no-commit", is_flag=True, help="Do not commit sync")
 def sync_cmd(master, backup, no_commit):
-    print("Not implemented yet!")
-    # def flatten_left_only(dc, prefix):
-    #     lefts = [path.join(prefix, l) for l in dc.left_only]
+    master_dir = dirdiff.loaded_dir(master)
+    backup_dir = dirdiff.loaded_dir(backup)
 
-    #     if dc.subdirs:
-    #         return lefts + [e for d, l in dc.subdirs.items() for e in flatten_left_only(l, d)]
-    #     else:
-    #         return lefts
+    diff = dirdiff.full_diff_dirs(master_dir, backup_dir, full_paths=True)
 
-    # res = flatten_left_only(filecmp.dircmp(master, backup), "")
+    logger.info("Setting master directory to %s", master)
+    logger.info("Setting backup directory to %s", backup)
 
-    # if no_commit:
-    #     print(
-    #         f"Syncing the following data from {master} to {backup}: {pp.pformat(res)}")
-    # else:
-    #     print(f"Syncing {master} contents to {backup}...")
-    #     for e in res:
-    #         master_copy = path.join(master, e)
-    #         backup_copy = path.join(backup, e)
+    if no_commit:
+        logger.info("No-commit enabled. No changes will be committed!")
 
-    #         if path.isfile(master_copy):
-    #             shutil.copy(master_copy, backup_copy)
-    #             print(f"File {master_copy} >>>> {backup_copy}")
-    #         else:
-    #             shutil.copytree(master_copy, backup_copy)
-    #             print(f"Directory {master_copy} >>>> {backup_copy}")
+    contents_to_copy = diff.files.changed | diff.files.missing | diff.subdirs.missing
+    for f in contents_to_copy:
+        master_copy = Path(f)
+        backup_copy = Path(backup) / master_copy.name
+
+        if no_commit:
+            content_type = "directory" if master_copy.is_dir() else "file"
+            logger.info("Will copy %s %s >>>> %s",
+                        content_type,
+                        fspath(master_copy),
+                        fspath(backup_copy))
+        else:
+            if master_copy.is_dir():
+                shutil.copytree(fspath(master_copy), fspath(backup_copy))
+                content_type = "directory"
+            else:
+                shutil.copy(fspath(master_copy), fspath(backup_copy))
+                content_type = "file"
+
+            logger.info("Copied %s %s >>>> %s",
+                        content_type,
+                        fspath(master_copy),
+                        fspath(backup_copy))
 
 
 def main():

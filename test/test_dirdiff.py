@@ -272,3 +272,8 @@ def test_full_diff_dirs(diff_fix):
     assert not diff.subdirs.missing
     assert not diff.subdirs.new
     assert not diff.subdirs.shared
+
+
+# TODO: Redo tests for dirdiff to use full_dir_diff
+# TODO: Add tests for different diff cases
+# TODO: Add sync tests as well as sync strategies
