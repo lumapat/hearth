@@ -1,6 +1,10 @@
 from os import fspath
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
+
+
+from hearth.dirdiff import Dir
+
 
 def create_dir(path: str,
                dir_dict: Dict[str, Any],
@@ -68,3 +72,26 @@ def multiple_subdir_levels(path: str):
 
     return pattern
 
+
+def deeply_nested_subdirs(path: str,
+                          bottom_files: List[str],
+                          num_levels: int = 3) -> Dir:
+    p = Path(path)/"subdir1"
+    root_dir = Dir("subdir1", fspath(p))
+
+    dir_ptr = root_dir
+    for i in range(2, num_levels):
+        subdirname = f"subdir{i}"
+        p = p/subdirname
+        subdir = Dir(
+            subdirname,
+            fspath(p/subdirname)
+        )
+
+        dir_ptr.subdirs = {subdirname: subdir}
+        dir_ptr = subdir
+
+    # At the deepest level
+    dir_ptr.files = bottom_files
+
+    return root_dir
