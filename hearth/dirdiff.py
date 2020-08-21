@@ -156,10 +156,10 @@ def compare_dirs(src_dir: Dir,
     )
 
 
-def _diff_walk(src_dir: Dir,
-               cmp_dir: Dir,
-               relative_path: str = "",
-               full_paths: bool = False) -> DirDiff:
+def _full_diff_helper(src_dir: Dir,
+                      cmp_dir: Dir,
+                      relative_path: str = "",
+                      full_paths: bool = False) -> DirDiff:
     dir_diff = compare_dirs(src_dir, cmp_dir, prefix_path=relative_path)
 
     subdirs = copy(dir_diff.subdirs.shared)
@@ -167,10 +167,10 @@ def _diff_walk(src_dir: Dir,
 
     for subdir in subdirs:
         base_subdir = basename(subdir)
-        subdir_diff = _diff_walk(src_dir.subdirs[base_subdir],
-                                 cmp_dir.subdirs[base_subdir],
-                                 relative_path=subdir,
-                                 full_paths=full_paths)
+        subdir_diff = _full_diff_helper(src_dir.subdirs[base_subdir],
+                                        cmp_dir.subdirs[base_subdir],
+                                        relative_path=subdir,
+                                        full_paths=full_paths)
 
         if subdir_diff:
             dir_diff |= subdir_diff
@@ -184,6 +184,6 @@ def full_diff_dirs(src_dir: Dir,
                    cmp_dir: Dir,
                    full_paths: bool = False) -> DirDiff:
 
-    return _diff_walk(src_dir,
-                      cmp_dir,
-                      full_paths=full_paths)
+    return _full_diff_helper(src_dir,
+                             cmp_dir,
+                             full_paths=full_paths)

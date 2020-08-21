@@ -243,6 +243,8 @@ def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_group):
             expected_match[matching_group] = common_files
             expected_diff = DirDiff(files=FilesDiff(**expected_match))
 
+            validate_diffs(src_dir, cmp_dir, expected_diff)
+
     validate_nest(src_dir, cmp_dir)
 
 
