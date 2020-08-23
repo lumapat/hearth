@@ -34,43 +34,31 @@ def create_dir(path: str,
 
 
 # TODO: Bring them under one identifier or something
-def multiple_subdir_levels(path: str):
+def multiple_subdir_levels(path: str) -> Dir:
     p = Path(path)
-    pattern = {
-        "dirname": p.name,
-        "fullpath": fspath(p),
-        "files": {"one"},
-        "subdirs": {
-            "sublevel1": {
-                "dirname": "sublevel1",
-                "fullpath": fspath(p/"sublevel1"),
-                "files": {"file1.txt", "file2.tsk"},
-                "subdirs": {
-                    "sublevel2": {
-                        "dirname": "sublevel2",
-                        "fullpath": fspath(p/"sublevel1"/"sublevel2"),
-                        "files": {"ugh.js", "ayy.css", "nope.html"},
-                        "subdirs": {
-                            "Secret Pictures": {
-                                "dirname": "Secret Pictures",
-                                "fullpath": fspath(p/"sublevel1"/"sublevel2"/"Secret Pictures"),
-                                "files": {"SECRET.png"},
-                                "subdirs": {}
-                            }
-                        }
-                    },
-                    "Pictures": {
-                        "dirname": "Pictures",
-                        "fullpath": fspath(p/"sublevel1"/"Pictures"),
-                        "files": {"img1.jpg", "img2.jpg", "vid1.mp4"},
-                        "subdirs": {}
-                    }
-                }
-            }
-        }
+    dir = Dir(p.name, fspath(p))
+    dir.files = ["one"]
+
+    s1_path = p/"sublevel1"
+    sublevel1 = Dir("sublevel1", fspath(s1_path))
+    sublevel1.files = {"file1.txt", "file2.tsk"}
+
+    sublevel2 = Dir("sublevel2", fspath(s1_path/"sublevel2"))
+    sublevel2.files = {"ugh.js", "ayy.css", "nope.html"}
+
+    secret_pictures = Dir("Secret Pictures", fspath(s1_path/"sublevel2"/"Secret Pictures"))
+    secret_pictures.files = {"SECRET.png"}
+    sublevel2.subdirs = {secret_pictures.dirname: secret_pictures}
+
+    pictures = Dir("Pictures", fspath(s1_path/"Pictures"))
+    pictures.files = {"img1.jpg", "img2.jpg", "vid1.mp4"}
+
+    sublevel1.subdirs = {
+        sublevel2.dirname: sublevel2,
+        pictures.dirname: pictures
     }
 
-    return pattern
+    return dir
 
 
 def deeply_nested_subdirs(path: str,
