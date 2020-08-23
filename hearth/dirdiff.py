@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import copy
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from filecmp import cmpfiles
 from functools import reduce, total_ordering
 from os import listdir
@@ -33,9 +33,6 @@ class Dir:
 
     def __lt__(self, other):
         return self.dirname.__lt__(other.dirname)
-
-    def asdict(self):
-        return asdict(self)
 
 
 @dataclass
