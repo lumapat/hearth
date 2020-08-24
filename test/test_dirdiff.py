@@ -192,60 +192,41 @@ def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_group):
         validate_diffs(src_dir.subdirs[d], cmp_dir.subdirs[d], expected_diff)
 
 
-@pytest.mark.parametrize("all_diff_contents, matching_group", [
-    (True, "changed"),
-    (False, "shared")
-])
-def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_group):
+def test_diff_nested_subdirs_same_contents(diff_fix):
     src_dir, cmp_dir = diff_fix
     common_files = set(["woah.jpg", "mad.png", "deep.arw"])
 
-    # Nest 3 levels deep
-    def init_nested_subdirs(dir_ptr):
-        for i in range(1, 4):
-            subdir_name = f"subdir{i}"
-            dir_ptr.subdirs = {
-                subdir_name: Dir(
-                    subdir_name,
-                    os.path.join(dir_ptr.fullpath, subdir_name)
-                )
-            }
-            dir_ptr = dir_ptr.subdirs[subdir_name]
+    src_dir = helpers.dir_schemas.deeply_nested_subdirs(src_dir.fullpath, common_files)
+    cmp_dir = helpers.dir_schemas.deeply_nested_subdirs(cmp_dir.fullpath, common_files)
 
-        # At the deepest level
-        dir_ptr.files = common_files
+    create_dir(src_dir.fullpath, src_dir, all_diff_contents=False)
+    create_dir(cmp_dir.fullpath, cmp_dir, all_diff_contents=False)
 
-    init_nested_subdirs(src_dir)
-    init_nested_subdirs(cmp_dir)
+    actual = sut.full_diff_dirs(src_dir, cmp_dir)
 
-    create_dir(src_dir.fullpath, src_dir,
-               all_diff_contents=all_diff_contents)
-    create_dir(cmp_dir.fullpath, cmp_dir,
-               all_diff_contents=all_diff_contents)
+    expected = DirDiff()
+    expected.subdirs = SubdirDiff(shared={"subdir1"})
 
-    def validate_nest(src_dir: Dir, cmp_dir: Dir):
-        if src_dir.subdirs and cmp_dir.subdirs:
-            # Still making our way downtown
-            # TODO: This also uses the assumption that validation only uses keys
-            #       Find a way to make this less brittle
-            common_subdir_names = set(src_dir.subdirs.keys())
-            expected_diff = DirDiff(subdirs=SubdirDiff(shared=common_subdir_names))
-            validate_diffs(src_dir, cmp_dir, expected_diff)
+    assert expected == actual
 
-            # This should only be a single linked list of directories
-            # Otherwise we're outside of the boundaries
-            assert len(common_subdir_names) == 1
-            subdir_name = list(common_subdir_names)[0]
-            validate_nest(src_dir.subdirs[subdir_name], cmp_dir.subdirs[subdir_name])
-        else:
-            # Now we're in downtown
-            expected_match = {}
-            expected_match[matching_group] = common_files
-            expected_diff = DirDiff(files=FilesDiff(**expected_match))
 
-            validate_diffs(src_dir, cmp_dir, expected_diff)
+def test_diff_nested_subdirs_diff_contents(diff_fix):
+    src_dir, cmp_dir = diff_fix
+    common_files = set(["woah.jpg", "mad.png", "deep.arw"])
 
-    validate_nest(src_dir, cmp_dir)
+    src_dir = helpers.dir_schemas.deeply_nested_subdirs(src_dir.fullpath, common_files)
+    cmp_dir = helpers.dir_schemas.deeply_nested_subdirs(cmp_dir.fullpath, common_files)
+
+    create_dir(src_dir.fullpath, src_dir, all_diff_contents=True, seed="SRC")
+    create_dir(cmp_dir.fullpath, cmp_dir, all_diff_contents=True, seed="CMP")
+
+    actual = sut.full_diff_dirs(src_dir, cmp_dir)
+
+    expected = DirDiff()
+    prefix = "subdir1/subdir2/subdir3/"
+    expected.files = FilesDiff(changed={prefix+p for p in common_files})
+
+    assert expected == actual
 
 
 def test_full_diff_dirs(diff_fix):
