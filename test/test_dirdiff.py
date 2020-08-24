@@ -133,10 +133,8 @@ def test_diff_only_files(diff_fix, empty_files, matching_group):
     src_dir.files = common_files
     cmp_dir.files = common_files
 
-    create_dir(src_dir.fullpath, src_dir,
-               empty_files=empty_files)
-    create_dir(cmp_dir.fullpath, cmp_dir,
-               empty_files=empty_files)
+    create_dir(src_dir.fullpath, src_dir, empty_files=empty_files)
+    create_dir(cmp_dir.fullpath, cmp_dir, empty_files=empty_files)
 
     expected_match = {}
     expected_match[matching_group] = common_files
@@ -259,6 +257,6 @@ def test_full_diff_dirs(diff_fix):
     assert not diff.subdirs.shared
 
 
-# TODO: Redo tests for dirdiff to use full_dir_diff
+# TODO: Enforce above assertions better with actual files to compare
 # TODO: Add tests for different diff cases
 # TODO: Add sync tests as well as sync strategies
