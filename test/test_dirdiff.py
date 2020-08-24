@@ -1,4 +1,5 @@
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
+from os import fspath
 from pathlib import Path
 from typing import Any, Dict, Set
 import os
@@ -20,54 +21,53 @@ import helpers.dir_schemas
 @pytest.mark.dir_ctor
 def test_dir_with_only_files(tmpdir):
     # GIVEN
-    temp_path = str(tmpdir)
-    expected = {
-        "dirname": os.path.basename(temp_path),
-        "fullpath": temp_path,
-        "files": {"one", "two", "three"},
-        "subdirs": {}
-    }
+    temp_path = Path(tmpdir)
+    expected = Dir(
+        temp_path.name,
+        fspath(temp_path),
+        {"one", "two", "three"}
+    )
     create_dir(temp_path, expected)
 
     # WHEN
     actual = loaded_dir(temp_path)
 
     # THEN
-    assert expected == asdict(actual)
+    assert expected == actual
 
 
 @pytest.mark.dir_ctor
 def test_dir_with_files_and_subdir(tmpdir):
     # GIVEN
-    temp_path = str(tmpdir)
-    expected = {
-        "dirname": os.path.basename(temp_path),
-        "fullpath": temp_path,
-        "files": {"one", "two", "three"},
-        "subdirs": {
-            "sublevel1": {
-                "dirname": "sublevel1",
-                "fullpath": os.path.join(temp_path, "sublevel1"),
-                "files": {"file1.txt", "file2.tsk", "file3.js"},
-                "subdirs": {}
-            }
-        }
+    temp_path = Path(tmpdir)
+    expected = Dir(
+        temp_path.name,
+        fspath(temp_path),
+        {"one", "two", "three"}
+    )
+    expected.subdirs = {
+        "sublevel1": Dir(
+            "sublevel1",
+            fspath(temp_path/"sublevel1"),
+            {"file1.txt", "file2.tsk", "file3.js"},
+        )
     }
+
     create_dir(temp_path, expected)
 
     # WHEN
     actual = loaded_dir(temp_path)
 
     # THEN
-    assert expected == asdict(actual)
+    assert expected == actual
 
 
 @pytest.mark.dir_ctor
 def test_dir_with_multiple_subdir_levels(tmpdir):
     # GIVEN
-    temp_path = str(tmpdir)
-    expected = helpers.dir_schemas.multiple_subdir_levels(str(tmpdir))
-    create_dir(temp_path, asdict(expected))
+    temp_path = Path(tmpdir)
+    expected = helpers.dir_schemas.multiple_subdir_levels(str(temp_path))
+    create_dir(temp_path, expected)
 
     # WHEN
     actual = loaded_dir(temp_path)
@@ -121,8 +121,8 @@ def test_diff_shallow_with_no_common_items(diff_fix,
     cmp_dir.subdirs = {
         d: Dir(d, os.path.join(cmp_dir.fullpath, d)) for d in cmp_subdirs}
 
-    create_dir(src_dir.fullpath, asdict(src_dir))
-    create_dir(cmp_dir.fullpath, asdict(cmp_dir))
+    create_dir(src_dir.fullpath, src_dir)
+    create_dir(cmp_dir.fullpath, cmp_dir)
 
     expected_diff = DirDiff()
     expected_diff.files = FilesDiff(missing=set(src_files), new=set(cmp_files))
@@ -142,9 +142,9 @@ def test_diff_only_files(diff_fix, all_diff_contents, matching_group):
     src_dir.files = common_files
     cmp_dir.files = common_files
 
-    create_dir(src_dir.fullpath, asdict(src_dir),
+    create_dir(src_dir.fullpath, src_dir,
                all_diff_contents=all_diff_contents)
-    create_dir(cmp_dir.fullpath, asdict(cmp_dir),
+    create_dir(cmp_dir.fullpath, cmp_dir,
                all_diff_contents=all_diff_contents)
 
     expected_match = {}
@@ -166,17 +166,17 @@ def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_group):
 
     src_dir, cmp_dir = diff_fix
     src_dir.subdirs = {
-        d: Dir(d, os.path.join(src_dir.fullpath, d), files=files)
+        d: Dir(d, Path(src_dir.fullpath)/d, files=files)
         for d, files in subdir_contents.items()
     }
     cmp_dir.subdirs = {
-        d: Dir(d, os.path.join(cmp_dir.fullpath, d), files=files)
+        d: Dir(d, Path(cmp_dir.fullpath)/d, files=files)
         for d, files in subdir_contents.items()
     }
 
-    create_dir(src_dir.fullpath, asdict(src_dir),
+    create_dir(src_dir.fullpath, src_dir,
                all_diff_contents=all_diff_contents)
-    create_dir(cmp_dir.fullpath, asdict(cmp_dir),
+    create_dir(cmp_dir.fullpath, cmp_dir,
                all_diff_contents=all_diff_contents)
 
     # TODO: Make this less brittle
@@ -218,9 +218,9 @@ def test_diff_nested_subdirs(diff_fix, all_diff_contents, matching_group):
     init_nested_subdirs(src_dir)
     init_nested_subdirs(cmp_dir)
 
-    create_dir(src_dir.fullpath, asdict(src_dir),
+    create_dir(src_dir.fullpath, src_dir,
                all_diff_contents=all_diff_contents)
-    create_dir(cmp_dir.fullpath, asdict(cmp_dir),
+    create_dir(cmp_dir.fullpath, cmp_dir,
                all_diff_contents=all_diff_contents)
 
     def validate_nest(src_dir: Dir, cmp_dir: Dir):
@@ -254,8 +254,8 @@ def test_full_diff_dirs(diff_fix):
     src_dir = helpers.dir_schemas.multiple_subdir_levels(src_dir.fullpath)
     cmp_dir = helpers.dir_schemas.multiple_subdir_levels(cmp_dir.fullpath)
 
-    create_dir(src_dir.fullpath, asdict(src_dir), all_diff_contents=True, seed="SRC")
-    create_dir(cmp_dir.fullpath, asdict(cmp_dir), all_diff_contents=True, seed="CMP")
+    create_dir(src_dir.fullpath, src_dir, all_diff_contents=True, seed="SRC")
+    create_dir(cmp_dir.fullpath, cmp_dir, all_diff_contents=True, seed="CMP")
 
     # WHEN
     src_dir = loaded_dir(src_dir.fullpath)

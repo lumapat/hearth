@@ -1,29 +1,31 @@
 from os import fspath
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 
 from hearth.dirdiff import Dir
 
 
 def create_dir(path: str,
-               dir_dict: Dict[str, Any],
+               target_dir: Dir,
                all_diff_contents: bool = False,
                seed: str = "") -> None:
     """ Creates a directory in the specified path
 
     :param path: Path to create directory in
-    :param dir_dict: Specification of contents to create in directory
+    :param target_dir: Specification of contents to create in directory
+    :param all_diff_contents: Add contents to each created file
+    :param seed: Text to add to contents (if write is enabled)
     """
 
-    for f in dir_dict["files"]:
+    for f in target_dir.files:
         fp = Path(path) / f
         if all_diff_contents:
             fp.write_text(f"{fp}{seed}")
         else:
             fp.touch()
 
-    for dirname, contents in dir_dict["subdirs"].items():
+    for dirname, contents in target_dir.subdirs.items():
         subdir_path = Path(path) / dirname
         subdir_path.mkdir()
 
@@ -33,11 +35,21 @@ def create_dir(path: str,
                    seed=seed)
 
 
+def only_files(path: str, files: Set[str]) -> Dir:
+    p = Path(path)
+
+    return Dir(
+        p.name,
+        fspath(p),
+        files=files
+    )
+
+
 # TODO: Bring them under one identifier or something
 def multiple_subdir_levels(path: str) -> Dir:
     p = Path(path)
-    dir = Dir(p.name, fspath(p))
-    dir.files = ["one"]
+    root_dir = Dir(p.name, fspath(p))
+    root_dir.files = ["one"]
 
     s1_path = p/"sublevel1"
     sublevel1 = Dir("sublevel1", fspath(s1_path))
@@ -58,7 +70,11 @@ def multiple_subdir_levels(path: str) -> Dir:
         pictures.dirname: pictures
     }
 
-    return dir
+    root_dir.subdirs = {
+        sublevel1.dirname: sublevel1
+    }
+
+    return root_dir
 
 
 def deeply_nested_subdirs(path: str,
