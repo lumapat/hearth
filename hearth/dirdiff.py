@@ -7,8 +7,10 @@ from functools import reduce, total_ordering
 from os import listdir
 from os.path import basename, isdir, isfile, join as ojoin
 from pathlib import Path
+from queue import Queue
 from typing import (
     Dict,
+    Callable,
     Generator,
     Iterable,
     List,
@@ -33,6 +35,20 @@ class Dir:
 
     def __lt__(self, other):
         return self.dirname.__lt__(other.dirname)
+
+
+def dir_walk(dir_: Dir,
+             func: Callable[[Dir], None]) -> None:
+    remaining_dirs = Queue()
+    remaining_dirs.put(dir_)
+
+    while not remaining_dirs.empty():
+        curr_dir = remaining_dirs.get()
+
+        func(curr_dir)
+
+        for d in curr_dir.subdirs.values():
+            remaining_dirs.put(d)
 
 
 @dataclass
@@ -184,3 +200,4 @@ def full_diff_dirs(src_dir: Dir,
     return _full_diff_helper(src_dir,
                              cmp_dir,
                              full_paths=full_paths)
+
