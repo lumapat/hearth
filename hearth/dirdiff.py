@@ -144,9 +144,9 @@ def _compare_subdirs(src_dir: Dir,
     )
 
 
-def compare_dirs(src_dir: Dir,
-                 cmp_dir: Dir,
-                 prefix_path: str = "") -> DirDiff:
+def _compare_dirs(src_dir: Dir,
+                  cmp_dir: Dir,
+                  prefix_path: str = "") -> DirDiff:
     return DirDiff(
         files=_compare_files(src_dir, cmp_dir, prefix_path=prefix_path),
         subdirs=_compare_subdirs(src_dir, cmp_dir, prefix_path=prefix_path)
@@ -157,7 +157,7 @@ def _full_diff_helper(src_dir: Dir,
                       cmp_dir: Dir,
                       relative_path: str = "",
                       full_paths: bool = False) -> DirDiff:
-    dir_diff = compare_dirs(src_dir, cmp_dir, prefix_path=relative_path)
+    dir_diff = _compare_dirs(src_dir, cmp_dir, prefix_path=relative_path)
 
     subdirs = copy(dir_diff.subdirs.shared)
     dir_diff.subdirs.shared.clear()

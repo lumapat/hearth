@@ -87,15 +87,6 @@ def diff_fix(tmpdir_factory):
     yield (src_dir, cmp_dir)
 
 
-def validate_diffs(left_dir: Dir,
-                   right_dir: Dir,
-                   expected_diff: DirDiff) -> DirDiff:
-    actual_diff = sut.compare_dirs(left_dir, right_dir)
-
-    assert expected_diff == actual_diff
-    return actual_diff
-
-
 @pytest.mark.parametrize("src_files, cmp_files, src_subdirs, cmp_subdirs", [
     (["f.txt", "g.txt"], [], [], []),
     ([], ["f.txt", "g.txt"], [], []),
@@ -154,14 +145,11 @@ def test_diff_only_files(diff_fix, empty_files, matching_group):
     assert expected == sut.full_diff_dirs(src_dir, cmp_dir)
 
 
-@pytest.mark.parametrize("empty_files, matching_group", [
-    (False, "changed"),
-    (True, "shared")
-])
-def test_diff_only_subdirs(diff_fix, empty_files, matching_group):
+def test_diff_only_subdirs_same_contents(diff_fix):
+    subdir_names = {"subdir_a", "subdir-b", "SUBDIR.C"}
     subdir_contents = {
         sub_name: set(f"{sub_name}.file{suffix}" for suffix in [".mp4", ".jpg", ".py"])
-        for sub_name in ["subdir_a", "subdir-b", "SUBDIR.C"]
+        for sub_name in subdir_names
     }
 
     src_dir, cmp_dir = diff_fix
@@ -174,22 +162,42 @@ def test_diff_only_subdirs(diff_fix, empty_files, matching_group):
         for d, files in subdir_contents.items()
     }
 
-    create_dir(src_dir.fullpath, src_dir,
-               empty_files=empty_files)
-    create_dir(cmp_dir.fullpath, cmp_dir,
-               empty_files=empty_files)
+    create_dir(src_dir.fullpath, src_dir, empty_files=True)
+    create_dir(cmp_dir.fullpath, cmp_dir, empty_files=True)
 
-    # TODO: Make this less brittle
-    # Diff only cares about keys for common subdirs, so we can ignore the values
-    expected_diff = DirDiff(subdirs=SubdirDiff(shared=set(subdir_contents.keys())))
-    actual_diff = validate_diffs(src_dir, cmp_dir, expected_diff)
+    expected = DirDiff(subdirs=SubdirDiff(shared=subdir_names))
+    assert expected == sut.full_diff_dirs(src_dir, cmp_dir)
 
-    for d in actual_diff.subdirs.shared:
-        expected_match = {}
-        expected_match[matching_group] = subdir_contents[d]
-        expected_diff = DirDiff(files=FilesDiff(**expected_match))
 
-        validate_diffs(src_dir.subdirs[d], cmp_dir.subdirs[d], expected_diff)
+def test_diff_only_subdirs_diff_contents(diff_fix):
+    subdir_names = {"subdir_a", "subdir-b", "SUBDIR.C"}
+    subdir_contents = {
+        sub_name: set(f"{sub_name}.file{suffix}" for suffix in [".mp4", ".jpg", ".py"])
+        for sub_name in subdir_names
+    }
+
+    src_dir, cmp_dir = diff_fix
+    src_dir.subdirs = {
+        d: Dir(d, Path(src_dir.fullpath)/d, files=files)
+        for d, files in subdir_contents.items()
+    }
+    cmp_dir.subdirs = {
+        d: Dir(d, Path(cmp_dir.fullpath)/d, files=files)
+        for d, files in subdir_contents.items()
+    }
+
+    create_dir(src_dir.fullpath, src_dir, empty_files=False, seed="SRC")
+    create_dir(cmp_dir.fullpath, cmp_dir, empty_files=False, seed="CMP")
+
+    # Add relative path to filenames
+    enriched_filenames = {
+        f"{subdir}/{filename}"
+        for subdir in subdir_names
+        for filename in subdir_contents[subdir]
+    }
+
+    expected = DirDiff(files=FilesDiff(changed=enriched_filenames))
+    assert expected == sut.full_diff_dirs(src_dir, cmp_dir)
 
 
 def test_diff_nested_subdirs_same_contents(diff_fix):
