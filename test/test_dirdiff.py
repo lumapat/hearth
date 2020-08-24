@@ -131,11 +131,11 @@ def test_diff_shallow_with_no_common_items(diff_fix,
     validate_diffs(src_dir, cmp_dir, expected_diff)
 
 
-@pytest.mark.parametrize("all_diff_contents, matching_group", [
-    (True, "changed"),
-    (False, "shared")
+@pytest.mark.parametrize("empty_files, matching_group", [
+    (False, "changed"),
+    (True, "shared")
 ])
-def test_diff_only_files(diff_fix, all_diff_contents, matching_group):
+def test_diff_only_files(diff_fix, empty_files, matching_group):
     common_files = set(["common.py", "common.txt", "common.mp4"])
 
     src_dir, cmp_dir = diff_fix
@@ -143,9 +143,9 @@ def test_diff_only_files(diff_fix, all_diff_contents, matching_group):
     cmp_dir.files = common_files
 
     create_dir(src_dir.fullpath, src_dir,
-               all_diff_contents=all_diff_contents)
+               empty_files=empty_files)
     create_dir(cmp_dir.fullpath, cmp_dir,
-               all_diff_contents=all_diff_contents)
+               empty_files=empty_files)
 
     expected_match = {}
     expected_match[matching_group] = common_files
@@ -154,11 +154,11 @@ def test_diff_only_files(diff_fix, all_diff_contents, matching_group):
     validate_diffs(src_dir, cmp_dir, expected_diff)
 
 
-@pytest.mark.parametrize("all_diff_contents, matching_group", [
-    (True, "changed"),
-    (False, "shared")
+@pytest.mark.parametrize("empty_files, matching_group", [
+    (False, "changed"),
+    (True, "shared")
 ])
-def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_group):
+def test_diff_only_subdirs(diff_fix, empty_files, matching_group):
     subdir_contents = {
         sub_name: set(f"{sub_name}.file{suffix}" for suffix in [".mp4", ".jpg", ".py"])
         for sub_name in ["subdir_a", "subdir-b", "SUBDIR.C"]
@@ -175,9 +175,9 @@ def test_diff_only_subdirs(diff_fix, all_diff_contents, matching_group):
     }
 
     create_dir(src_dir.fullpath, src_dir,
-               all_diff_contents=all_diff_contents)
+               empty_files=empty_files)
     create_dir(cmp_dir.fullpath, cmp_dir,
-               all_diff_contents=all_diff_contents)
+               empty_files=empty_files)
 
     # TODO: Make this less brittle
     # Diff only cares about keys for common subdirs, so we can ignore the values
@@ -199,8 +199,8 @@ def test_diff_nested_subdirs_same_contents(diff_fix):
     src_dir = helpers.dir_schemas.deeply_nested_subdirs(src_dir.fullpath, common_files)
     cmp_dir = helpers.dir_schemas.deeply_nested_subdirs(cmp_dir.fullpath, common_files)
 
-    create_dir(src_dir.fullpath, src_dir, all_diff_contents=False)
-    create_dir(cmp_dir.fullpath, cmp_dir, all_diff_contents=False)
+    create_dir(src_dir.fullpath, src_dir, empty_files=True)
+    create_dir(cmp_dir.fullpath, cmp_dir, empty_files=True)
 
     actual = sut.full_diff_dirs(src_dir, cmp_dir)
 
@@ -217,8 +217,8 @@ def test_diff_nested_subdirs_diff_contents(diff_fix):
     src_dir = helpers.dir_schemas.deeply_nested_subdirs(src_dir.fullpath, common_files)
     cmp_dir = helpers.dir_schemas.deeply_nested_subdirs(cmp_dir.fullpath, common_files)
 
-    create_dir(src_dir.fullpath, src_dir, all_diff_contents=True, seed="SRC")
-    create_dir(cmp_dir.fullpath, cmp_dir, all_diff_contents=True, seed="CMP")
+    create_dir(src_dir.fullpath, src_dir, empty_files=False, seed="SRC")
+    create_dir(cmp_dir.fullpath, cmp_dir, empty_files=False, seed="CMP")
 
     actual = sut.full_diff_dirs(src_dir, cmp_dir)
 
@@ -235,8 +235,8 @@ def test_full_diff_dirs(diff_fix):
     src_dir = helpers.dir_schemas.multiple_subdir_levels(src_dir.fullpath)
     cmp_dir = helpers.dir_schemas.multiple_subdir_levels(cmp_dir.fullpath)
 
-    create_dir(src_dir.fullpath, src_dir, all_diff_contents=True, seed="SRC")
-    create_dir(cmp_dir.fullpath, cmp_dir, all_diff_contents=True, seed="CMP")
+    create_dir(src_dir.fullpath, src_dir, empty_files=False, seed="SRC")
+    create_dir(cmp_dir.fullpath, cmp_dir, empty_files=False, seed="CMP")
 
     # WHEN
     src_dir = loaded_dir(src_dir.fullpath)

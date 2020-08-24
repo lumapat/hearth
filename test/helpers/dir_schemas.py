@@ -7,22 +7,22 @@ from hearth.dirdiff import Dir
 
 def create_dir(path: str,
                dir_spec: Dir,
-               all_diff_contents: bool = False,
+               empty_files: bool = True,
                seed: str = "") -> None:
     """ Creates a directory in the specified path
 
     :param path: Path to create directory in
     :param dir_spec: Specification of contents to create in directory
-    :param all_diff_contents: Add contents to each created file
+    :param empty_files: Flag for whether files should have content or not
     :param seed: Text to add to contents (if write is enabled)
     """
 
     for f in dir_spec.files:
         fp = Path(path) / f
-        if all_diff_contents:
-            fp.write_text(f"{fp}{seed}")
-        else:
+        if empty_files:
             fp.touch()
+        else:
+            fp.write_text(f"{fp}{seed}")
 
     for dirname, contents in dir_spec.subdirs.items():
         subdir_path = Path(path) / dirname
@@ -30,7 +30,7 @@ def create_dir(path: str,
 
         create_dir(subdir_path,
                    contents,
-                   all_diff_contents=all_diff_contents,
+                   empty_files=empty_files,
                    seed=seed)
 
 
