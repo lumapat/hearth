@@ -124,11 +124,11 @@ def test_diff_shallow_with_no_common_items(diff_fix,
     create_dir(src_dir.fullpath, src_dir)
     create_dir(cmp_dir.fullpath, cmp_dir)
 
-    expected_diff = DirDiff()
-    expected_diff.files = FilesDiff(missing=set(src_files), new=set(cmp_files))
-    expected_diff.subdirs = SubdirDiff(missing=set(src_subdirs), new=set(cmp_subdirs))
+    expected = DirDiff()
+    expected.files = FilesDiff(missing=set(src_files), new=set(cmp_files))
+    expected.subdirs = SubdirDiff(missing=set(src_subdirs), new=set(cmp_subdirs))
 
-    validate_diffs(src_dir, cmp_dir, expected_diff)
+    assert expected == sut.full_diff_dirs(src_dir, cmp_dir)
 
 
 @pytest.mark.parametrize("empty_files, matching_group", [
@@ -149,9 +149,9 @@ def test_diff_only_files(diff_fix, empty_files, matching_group):
 
     expected_match = {}
     expected_match[matching_group] = common_files
-    expected_diff = DirDiff(files=FilesDiff(**expected_match))
+    expected = DirDiff(files=FilesDiff(**expected_match))
 
-    validate_diffs(src_dir, cmp_dir, expected_diff)
+    assert expected == sut.full_diff_dirs(src_dir, cmp_dir)
 
 
 @pytest.mark.parametrize("empty_files, matching_group", [
@@ -202,12 +202,10 @@ def test_diff_nested_subdirs_same_contents(diff_fix):
     create_dir(src_dir.fullpath, src_dir, empty_files=True)
     create_dir(cmp_dir.fullpath, cmp_dir, empty_files=True)
 
-    actual = sut.full_diff_dirs(src_dir, cmp_dir)
-
     expected = DirDiff()
     expected.subdirs = SubdirDiff(shared={"subdir1"})
 
-    assert expected == actual
+    assert expected == sut.full_diff_dirs(src_dir, cmp_dir)
 
 
 def test_diff_nested_subdirs_diff_contents(diff_fix):
@@ -220,13 +218,11 @@ def test_diff_nested_subdirs_diff_contents(diff_fix):
     create_dir(src_dir.fullpath, src_dir, empty_files=False, seed="SRC")
     create_dir(cmp_dir.fullpath, cmp_dir, empty_files=False, seed="CMP")
 
-    actual = sut.full_diff_dirs(src_dir, cmp_dir)
-
     expected = DirDiff()
     prefix = "subdir1/subdir2/subdir3/"
     expected.files = FilesDiff(changed={prefix+p for p in common_files})
 
-    assert expected == actual
+    assert expected == sut.full_diff_dirs(src_dir, cmp_dir)
 
 
 def test_full_diff_dirs(diff_fix):
