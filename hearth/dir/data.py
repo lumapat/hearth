@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from functools import total_ordering
 from os import listdir
-from os.path import basename, isdir, isfile, join as ojoin
+from pathlib import Path
 from queue import Queue
 from typing import (
     Dict,
@@ -30,16 +30,18 @@ class Dir:
         return self.dirname.__lt__(other.dirname)
 
 
-# TODO: Docs
 def loaded_dir(path: str) -> Dir:
+    """ Load directory in the specified path into a Dir object """
     entries = listdir(path=path)
+    p = Path(path)
 
-    subdirs = {d: loaded_dir(ojoin(path, d)) for d in entries if isdir(ojoin(path, d))}
-    files =  {f for f in entries if isfile(ojoin(path, f))}
+    subdirs = {d: loaded_dir(p/d) for d in entries if (p/d).is_dir()}
+    files =  {f for f in entries if (p/f).is_file()}
 
-    return Dir(basename(path), path, files=files, subdirs=subdirs)
+    return Dir(p.name, path, files=files, subdirs=subdirs)
 
 
+# TODO: Docs
 def dir_walk(dir_: Dir,
              func: Callable[[Dir], None]) -> None:
     remaining_dirs = Queue()
