@@ -36,10 +36,12 @@ def test_dir_with_files_and_subdir(tmpdir):
         fspath(temp_path),
         {"one", "two", "three"}
     )
+
+    subdir_name = "sublevel1"
     expected.subdirs = {
-        "sublevel1": sut.Dir(
-            "sublevel1",
-            fspath(temp_path/"sublevel1"),
+        subdir_name: sut.Dir(
+            subdir_name,
+            fspath(temp_path/subdir_name),
             {"file1.txt", "file2.tsk", "file3.js"},
         )
     }
@@ -56,7 +58,7 @@ def test_dir_with_files_and_subdir(tmpdir):
 def test_dir_with_multiple_subdir_levels(tmpdir):
     # GIVEN
     temp_path = Path(tmpdir)
-    expected = helpers.dir_schemas.multiple_subdir_levels(str(temp_path))
+    expected = helpers.dir_schemas.multiple_subdir_levels(temp_path)
     create_dir(temp_path, expected)
 
     # WHEN
