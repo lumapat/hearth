@@ -2,7 +2,7 @@ from os import fspath
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
-from hearth.dirdiff import Dir
+from hearth.dir.diff import Dir
 
 
 def create_dir(path: str,
