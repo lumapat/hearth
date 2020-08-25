@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import total_ordering
+from os import listdir
+from os.path import basename, isdir, isfile, join as ojoin
 from queue import Queue
 from typing import (
     Dict,
@@ -26,6 +28,16 @@ class Dir:
 
     def __lt__(self, other):
         return self.dirname.__lt__(other.dirname)
+
+
+# TODO: Docs
+def loaded_dir(path: str) -> Dir:
+    entries = listdir(path=path)
+
+    subdirs = {d: loaded_dir(ojoin(path, d)) for d in entries if isdir(ojoin(path, d))}
+    files =  {f for f in entries if isfile(ojoin(path, f))}
+
+    return Dir(basename(path), path, files=files, subdirs=subdirs)
 
 
 def dir_walk(dir_: Dir,

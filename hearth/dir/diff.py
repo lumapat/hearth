@@ -80,16 +80,6 @@ class DirDiff:
         return any([self.files, self.subdirs])
 
 
-# TODO: Docs
-def loaded_dir(path: str) -> Dir:
-    entries = listdir(path=path)
-
-    subdirs = {d: loaded_dir(ojoin(path, d)) for d in entries if isdir(ojoin(path, d))}
-    files =  {f for f in entries if isfile(ojoin(path, f))}
-
-    return Dir(basename(path), path, files=files, subdirs=subdirs)
-
-
 def _prepend_path(paths: Iterable[str],
                   path: str) -> Set[str]:
     if path:
