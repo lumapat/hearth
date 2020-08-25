@@ -6,7 +6,8 @@ import os
 
 import pytest  # type: ignore
 
-from hearth.dirdiff import (
+from hearth.dir.data import Dir
+from hearth.dir.diff import (
     Dir,
     DirDiff,
     FilesDiff,
@@ -14,7 +15,7 @@ from hearth.dirdiff import (
     loaded_dir
 )
 from helpers.dir_schemas import create_dir
-import hearth.dirdiff as sut
+import hearth.dir.diff as sut
 import helpers.dir_schemas
 
 
