@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import total_ordering
-from os import listdir
+from os import listdir, PathLike
 from pathlib import Path
 from queue import Queue
 from typing import (
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass(eq=False, order=False)
 class Dir:
     dirname: str
-    fullpath: str
+    fullpath: PathLike
     files: Set[str] = field(default_factory=set)
     subdirs: Dict[str, Dir] = field(default_factory=dict)
 
@@ -30,7 +30,7 @@ class Dir:
         return self.dirname.__lt__(other.dirname)
 
 
-def loaded_dir(path: str) -> Dir:
+def loaded_dir(path: PathLike) -> Dir:
     """ Load directory in the specified path into a Dir object """
     entries = listdir(path=path)
     p = Path(path)
@@ -44,7 +44,7 @@ def loaded_dir(path: str) -> Dir:
 # TODO: Docs
 def dir_walk(dir_: Dir,
              func: Callable[[Dir], None]) -> None:
-    remaining_dirs = Queue()
+    remaining_dirs: Queue = Queue()
     remaining_dirs.put(dir_)
 
     while not remaining_dirs.empty():
@@ -54,4 +54,3 @@ def dir_walk(dir_: Dir,
 
         for d in curr_dir.subdirs.values():
             remaining_dirs.put(d)
-

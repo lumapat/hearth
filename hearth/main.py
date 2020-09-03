@@ -10,7 +10,8 @@ import pprint
 import shutil
 import sys
 
-from hearth import dirdiff, sync_central
+from hearth import sync_central
+from hearth.dir import data, diff as dirdiff
 
 pp: pprint.PrettyPrinter = pprint.PrettyPrinter(indent=4)
 DEFAULT_SAVE_FILENAME = ".hearth-central.toml"
@@ -34,8 +35,8 @@ def root():
 @click.argument("src")
 @click.argument("target")
 def compare_cmd(src, target):
-    src_dir = dirdiff.loaded_dir(src)
-    target_dir = dirdiff.loaded_dir(target)
+    src_dir = data.loaded_dir(src)
+    target_dir = data.loaded_dir(target)
     res = dirdiff.full_diff_dirs(src_dir, target_dir)
 
     pp.pprint(asdict(res))
@@ -119,8 +120,8 @@ def list_cmd():
 @click.argument("backup")
 @click.option("--no-commit", is_flag=True, help="Do not commit sync")
 def sync_cmd(master, backup, no_commit):
-    master_dir = dirdiff.loaded_dir(master)
-    backup_dir = dirdiff.loaded_dir(backup)
+    master_dir = data.loaded_dir(master)
+    backup_dir = data.loaded_dir(backup)
 
     diff = dirdiff.full_diff_dirs(master_dir, backup_dir, full_paths=True)
 
