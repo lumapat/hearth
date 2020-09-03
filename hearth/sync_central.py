@@ -1,7 +1,8 @@
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict
 from pathlib import Path
+from typing import Dict
+
 import toml
 
 

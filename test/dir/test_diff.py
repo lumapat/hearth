@@ -1,22 +1,17 @@
 
+import os
 from dataclasses import dataclass, field
 from os import fspath, listdir
 from pathlib import Path
 from typing import Any, Dict, Set
-import os
 
 import pytest  # type: ignore
 
-from hearth.dir.data import Dir, loaded_dir
-from hearth.dir.diff import (
-    Dir,
-    DirDiff,
-    FilesDiff,
-    SubdirDiff,
-)
-from helpers.dir_schemas import create_dir
 import hearth.dir.diff as sut
 import helpers.dir_schemas
+from hearth.dir.data import Dir, loaded_dir
+from hearth.dir.diff import Dir, DirDiff, FilesDiff, SubdirDiff
+from helpers.dir_schemas import create_dir
 
 
 @pytest.fixture(scope="function")

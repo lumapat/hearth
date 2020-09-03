@@ -1,17 +1,12 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from functools import total_ordering
-from os import listdir, PathLike
+from os import PathLike, listdir
 from pathlib import Path
 from queue import Queue
-from typing import (
-    Dict,
-    Callable,
-    Set,
-)
-import logging
-
+from typing import Callable, Dict, Set
 
 logger = logging.getLogger(__name__)
 

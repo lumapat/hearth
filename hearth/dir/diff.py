@@ -1,23 +1,17 @@
 from __future__ import annotations
 
-from hearth.dir.data import Dir
-
+import logging
 from copy import copy
 from dataclasses import dataclass, field
 from filecmp import cmpfiles
 from os import listdir
-from os.path import basename, isdir, isfile, join as ojoin
+from os.path import basename, isdir, isfile
+from os.path import join as ojoin
 from pathlib import Path
 from queue import Queue
-from typing import (
-    Dict,
-    Generator,
-    Iterable,
-    List,
-    Set,
-)
-import logging
+from typing import Dict, Generator, Iterable, List, Set
 
+from hearth.dir.data import Dir
 
 logger = logging.getLogger(__name__)
 

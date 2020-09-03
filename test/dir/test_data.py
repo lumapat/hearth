@@ -1,14 +1,14 @@
+import os
 from dataclasses import dataclass, field
 from os import fspath
 from pathlib import Path
 from typing import Any, Dict, Set
-import os
 
 import pytest  # type: ignore
 
-from helpers.dir_schemas import create_dir
 import hearth.dir.data as sut
 import helpers.dir_schemas
+from helpers.dir_schemas import create_dir
 
 
 def test_dir_with_only_files(tmpdir):
